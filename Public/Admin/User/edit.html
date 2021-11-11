@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>编辑用户</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<div id="user_info"></div>
+	</div>
+</body>
+
+<script src="../_public/refresh.js"></script>
+<script type="text/javascript">
+	var this_param = crm.getParam({id: ''});
+
+	userInfo();
+
+	function userInfo(){
+
+		crm.post(crm.api_local + "/user/info", {id: this_param.id}, function(data){
+			var html_info = '';
+			var datas = data.info;
+
+			html_info += `
+		<div class="layui-form-item">
+			<label class="layui-form-label">id</label>
+			<div class="layui-input-block">
+				<input type="text" id="id" value="` + datas.id + `" readonly="readonly" class="layui-input">
+			</div>
+		</div>
+		<div class="layui-form-item">
+			<label class="layui-form-label">账号</label>
+			<div class="layui-input-block">
+				<input type="text" id="username" class="layui-input" value="` + datas.username + `"` + (datas.username ? ` readonly="readonly">` : ``) + `
+			</div>
+		</div>
+		<div class="layui-form-item">
+			<label class="layui-form-label">昵称</label>
+			<div class="layui-input-block">
+				<input type="text" id="nickname" class="layui-input" value="` + datas.nickname + `">			
+			</div>
+		</div>
+
+		<div class="layui-form-item">
+			<div class="layui-input-block">
+				<button class="layui-btn" lay-submit onclick="doEdit();">立即提交</button>
+			</div>
+		</div>`;
+
+			$("#user_info").empty().append(html_info);
+		});
+	}
+
+	function doEdit(){
+		var username = document.getElementById('username').value;
+		var nickname = document.getElementById('nickname').value;
+
+		crm.post(crm.api_local + "/user/edit", {id: this_param.id, username: username, nickname: nickname}, function(data){
+			window.location.reload();
+		});
+	}
+</script>
+</html>

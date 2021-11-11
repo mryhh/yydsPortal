@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title></title>
+	<link rel="stylesheet" href="../_public/css/attention.css">
+	<script src="../_public/head.js"></script>
+	<!-- <script src='../_public/lib/layui/lay/modules/layer.js'></script> -->
+	<style type="text/css">
+
+	</style>
+</head>
+
+<body>
+	<div class="attention">
+		<!-- 第一层tab -->
+		<div class="layui-tab layui-tab-brief">
+			<ul class="layui-tab-title">
+				<li>关键词自动回复</li>
+			</ul>
+
+			<div class="layui-tab-content" id="outerMoster">
+				<!-- 列表页面 -->
+				<div class="keywordTable">
+					<button class="ui-btn ui-btn-green" style="color: #fff;background-color: #8bc34a;border:none; padding: 10px; border-radius: 2px; border-color: #8bc34a" onclick="keywordShow()">
+						<span class="glyphicon glyphicon-plus"></span> 新建规则
+					</button>
+					<!-- 页面中的tab -->
+					<table class="layui-hide" id="test" lay-filter="test" style="width: 100%;">
+
+					</table>
+				</div>
+
+				<!-- 编辑表单页面 -->
+				<form class="keywordForm" action="" style="display: none;">
+					<div class="layui-form-item rulename">
+						<label class="layui-form-label" style="width:auto">规则名称</label>
+						<div class="layui-input-block">
+							<input type="text" name="title" required lay-verify="required" placeholder="请输入标题" autocomplete="off" class="layui-input">
+						</div>
+					</div>
+
+					<div class="layui-form-item seq">
+						<label class="layui-form-label" style="width:auto">排序</label>
+						<div class="layui-input-block">
+							<input type="text" name="seq" required lay-verify="required" placeholder="请输入排序" autocomplete="off" class="layui-input">
+						</div>
+					</div>
+
+					<div class="layui-form-item reply_type">
+						<label class="layui-form-label" style="width:auto">消息类型</label>
+						<div class="layui-input-block">
+							<select class="layui-input layui-input-38" lay-filter="reply_type" id="reply_type" onchange="change_reply_type(this);">
+								<option value="keywords">关键词回复</option>
+								<option value="attention">关注公众号回复</option>
+								<option value="activity">默认回复（未找到关键词时的回复）</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="layui-form-item keyword">
+						<label class="layui-form-label" style="width:auto">关键词</label>
+						<div class="layui-input-block">
+							<a class="layui-btn layui-btn-sm" id="addKeyWords" class="layui-btn layui-btn-normal">添加</a>
+							<ul style="margin-top: 10px;" id="keyWordArr">
+							</ul>
+						</div>
+					</div>
+
+					<div class="layui-form-item replyContent">
+						<label class="layui-form-label" style="width:auto">回复内容</label>
+						<div class="layui-input-block" style="position: relative;">
+							<ul class="layui-tab-title">
+								<li class="layui-this" onclick="setText(this)">文本</li>
+								<li onclick="setImg(this)">图片</li>
+							</ul>
+							<div class="layui-tab-content" id="innerMoster" style="padding: 6px 0;">
+							</div>
+							<a id="insert" style="position: absolute; color:#8bc34a; right: 0; top: 0;">插入小程序</a>
+						</div>
+					</div>
+
+					<div style="background: #ffffff; bottom: 0; width: 100%; right: 0; left: 0; position: fixed;text-align:center;padding: 10px 0;">
+						<input type="button" onclick="backKeyword();" style="background-color: #fff;padding: 12px 12px;border:1px solid #ccc;margin-left: 10px;width:120px;border-radius: 2px" value="返回" />
+						<input type="button" id="toSave" onclick="Keyword_edit(this)" style="color: #fff;background-color: #8bc34a;padding: 12px 12px;border:none;width:120px;border-radius: 2px" value="保存" />
+					</div>
+				</form>
+
+			</div>
+
+		</div>
+	</div>
+
+</body>
+
+<script type="text/javascript">
+	getKtable();
+
+	let arr = [];
+	let obj = {};
+
+	// 显示表格
+	function getKtable(){
+		crm.post(crm.api_local + '/WxProgram/autoReply', {pageNumber: 1, pageSize: 100000},
+			function (data) {
+				var list = data;
+				var col = [
+					[{
+						field: 'id',
+						title: 'id',
+						width: 55,
+						sort: true,
+					},{
+						field: 'seq',
+						title: '排序',
+						width: 75,
+						sort: true,
+						// templet: function(d){
+						// 	return `<input class="layui-input" type="text" name="" value="` + d.seq + `" oninput="editInput(event, this, '` + d.id + `', 'seq');">`;
+						// },
+					},{
+						field: 'rule_name',
+						width: 90,
+						title: '规则名称',
+					},{
+						field: 'reply_type',
+						title: '消息类型',
+						width: 90,
+						templet: function (d) {
+							if(d.reply_type == 'attention') {
+								return '<p style="color:#55A5D6">关注公众号回复</p>';
+							}else if (d.reply_type == 'activity') {
+								return '<p style="color:#E0572A">默认回复</p>';
+							}else if(d.reply_type == 'keywords'){
+								return '关键词回复';
+							}else{
+								return '未知';
+							}
+						},
+					},{
+						field: 'keywords',
+						width: 120,
+						title: '关键词',
+						templet: function(d){
+							var _html = '<p style="font-size:12px;">' + d.keywords + '</p>';
+							return _html;
+						}, 
+					},{
+						field: 'msg_type',
+						title: '回复类型',
+						width: 80,
+						templet: function (d) {
+							if (d.msg_type == 'text') {
+								return '文本'
+							} else if (d.msg_type == 'image') {
+								return '图片'
+							} else {
+								return '未知'
+							}
+						},
+					},{
+						field: 'transmit_content',
+						title: '回复内容',
+						templet: function(d){
+							var _html = (d.msg_type == 'image' ? '<img src="' + d.marks_1 + '" width="100%">' : '<p style="font-size:11px;">' + d.transmit_content + '</p>');
+							return _html;
+						}, 
+					},{
+						field: 'isactive', title: '可用', width: 75, sort: true, 
+						templet: function(d){
+							var checked = (d.isactive == 'Y' ? 'checked' : '');
+							return `<input type="checkbox" name="isactive" value="` + d.id + `" lay-skin="switch" lay-filter="isactive" lay-text="是|否" ` + checked + `>`;
+						}, 
+					},{
+						title: '操作',
+						width: 70,
+						templet: function(d){
+							return `
+							<div id="barDemo_1">
+								<a class="layui-btn layui-btn-sm layui-btn-normal" lay-event="submit">提交</a>
+							</div>
+							<div id="barDemo" style="margin-top:10px;">
+								<a class="layui-btn layui-btn-sm" lay-event="edit">编辑</a>
+							</div>`;
+						}
+					}]
+				]
+				crm._table('#test', { list, cols: col}, function (table, form) {
+					// 可用|禁用
+					form.on('switch(isactive)', function(obj){
+						var isactive = obj.elem.checked ? 'Y' : 'N';
+						for(var i = 0; i < data.length; i++){
+							if(data[i].id == obj.value){
+								data[i].isactive = isactive;
+							}
+						}
+						console.log(data)
+					});
+
+					table.on('tool(test)', function (obj) {
+						if (obj.event === 'submit') {
+							console.log(obj.data)
+							var _parm = obj.data;
+							var _post_parma = new Object();
+							if(!_parm.id){
+								_post_parma.id = 'new';
+							}
+							$.each(col[0], function(key, value){
+								if(_parm[value['field']]){
+									_post_parma[value['field']] = _parm[value['field']];
+								}
+							});
+							console.log(_post_parma);
+							crm.post(crm.api_local + '/WxProgram/editAutoReply.html', _post_parma, function (res) {
+								
+							});
+						}
+						if (obj.event === 'edit') {
+							keywordShow(obj.data.id)
+						}
+					});
+				})
+			});
+	}
+	
+	// 设置文本
+	function setText(i) {
+		$(i).addClass('layui-this');
+		$(i).siblings().removeClass('layui-this');
+		$('#innerMoster').html(
+			`<div class="layui-tab-item layui-show" data-type="auto"><textarea placeholder="请输入内容" value="" class="layui-textarea" rows="10"></textarea></div>`
+		)
+		$('#insert').show();
+	}
+
+	// 设置图片
+	function setImg(i, j, z) {
+		$('#insert').hide();
+		$(i).addClass('layui-this');
+		$(i).siblings().removeClass('layui-this');
+		$('#innerMoster').html(
+			`<div class="layui-tab-item layui-show" data-type="auto"><button type="button" id="k_uploadImg_new" class="layui-btn scImg">上传图片</button>
+				<div style="width: 200px;margin-top: 20px;">
+					<img alt="" class="scGetImg" width="100%" src="../_public/images/ceremony06.png">
+				</div>
+			</div>`
+		);
+		FunuploadImg('k_uploadImg_new', 'new');
+	}
+
+	function keywordShow(i) {
+		$('.keywordForm').show();
+		$('.keywordTable').hide();
+		$('#keyWordArr').empty();
+		if (i) {
+			// 编辑
+			let p = {
+				id: i
+			}
+			crm.post(crm.api_local + "/WxProgram/autoReplyInfo", p, function(data){
+				$('.rulename input').val(data.rule_name);
+				$('.seq input').val(data.seq);
+				var arr = [];
+				arr = data.keywords;
+				if( Array.isArray(arr) ){
+					arr.map(item => {
+						$('#keyWordArr').append(
+							`<li><span>` + item + `</span><span class="close" onclick="removeKeywords(this)" style="line-height: 20px" title="删除">×</span></li>`
+						)
+					})
+				}
+				var msg_type = data.msg_type;
+				$('.replyContent .layui-tab-title > li').removeClass('layui-this');
+				if (msg_type == 'text') {
+					$('.replyContent .layui-tab-title > li:first').addClass('layui-this');
+					$('#innerMoster').html(`<div class="layui-tab-item layui-show" data-type="auto">
+												<textarea placeholder="请输入内容"  class="layui-textarea" rows="10"></textarea>
+											</div>`);
+					$('#innerMoster textarea').val(data.transmit_content)
+				} else if (msg_type == 'image') {
+					$('.replyContent .layui-tab-title > li:nth-child(2)').addClass('layui-this');
+					$('#innerMoster').html(`
+					<div class="layui-tab-item layui-show" data-type="auto">
+						<button type="button" class="layui-btn" id="k_uploadImg_` + data.id + `">上传图片</button>
+						<div style="width: 200px;margin-top: 20px;">
+							<img alt="" class="scGetImg" width="100%" src="../_public/images/ceremony06.png">
+						</div>
+					</div>`);
+					$('#innerMoster .scGetImg').attr('src', data.marks_1);
+					$('#innerMoster .scGetImg').attr('data-media_id', data.transmit_content);
+					FunuploadImg('k_uploadImg_' + data.id, data.id);
+				}
+
+				var reply_type = data.reply_type;
+				$("#reply_type option[value='" + reply_type + "']").attr("selected","selected");
+			})
+			$('#toSave').attr('data-id', i)
+		} else {
+			$('#keyWordArr').empty();
+			$('.replyContent .layui-tab-title > li:first').addClass('layui-this');
+			$('#innerMoster').html(`<div class="layui-tab-item layui-show" data-type="auto">
+										<textarea placeholder="请输入内容" value="" class="layui-textarea" rows="10"></textarea>
+									</div>`);
+			$('#toSave').attr('data-id', '')
+		}
+		// 添加关键词
+		$('#addKeyWords').click(function(){
+			layer.open({
+				type: 1,
+				title: '添加关键词',
+				content: '<div class="layui-form-item layui-form-text" style="padding: 5px 10px;"><div class=""><textarea id="keywordModal" placeholder="请输入内容" rows="5" cols="100" class="layui-textarea"></textarea></div></div>',
+				btn: ['确定'],
+				btnAlign: 'c', //按钮居中
+				shade: 0.3, //不显示遮罩
+				yes: function () {
+					$('#keyWordArr').append(
+						`<li><span>` + $('#keywordModal').val() + `</span><span class="close" onclick="removeKeywords(this)" style="line-height: 20px" title="删除">×</span></li>`
+					)
+					layer.closeAll();
+				}
+			});
+			// xadmin.open('编辑用户', crm.app_local + `/User/groupUser.html?id=` + data.id)
+		})
+		$('#insert').click(function(){
+			layer.open({
+				type: 1,
+				title: '小程序',
+				area: '500px',
+				content: `<div style="padding: 10px 15px;">
+					<div id="border_box_url">
+                            <label style="float: left; text-align: center; line-height: 50px; width: 15%; color: #666; font-weight: 400;">链接</label>
+                            <div class="contents" style="line-height: 50px; width: 80%; float: left; padding: 0px;">
+                                <input class="input_text_1" style="height: 30px; line-height: 30px; margin: 10px 0; width: 80%; padding: 0 12px; border: 1px solid #ccc;" type="text" name="edit_input" data-type="data-url" value="">
+                            </div>
+                        </div>
+                        <div style="clear:both;">
+                        <div id="border_box_appid">
+                            <label style="float: left; text-align: center; line-height: 50px; width: 15%; color: #666; font-weight: 400;">appid</label>
+                            <div class="contents" style="line-height: 50px; width: 80%; float: left; padding: 0px;">
+                                <input class="input_text_2" style="height: 30px; line-height: 30px; margin: 10px 0; width: 80%; padding: 0 12px; border: 1px solid #ccc;"  type="text" name="edit_input" data-type="data-appid" value="">
+                            </div>
+                        </div>
+                        <div style="clear:both;">
+                        <div id="border_box_pagepath">
+                            <label style="float: left; text-align: center; line-height: 50px; width: 15%; color: #666; font-weight: 400;">页面</label>
+                            <div class="contents" style="line-height: 50px; width: 80%; float: left; padding: 0px;">
+                                <input class="input_text_3" style="height: 30px; line-height: 30px; margin: 10px 0; width: 80%; padding: 0 12px; border: 1px solid #ccc;"  type="text" name="edit_input" data-type="data-pagepath" value="">
+                            </div>
+						</div>
+						<div id="border_box_text">
+                            <label style="float: left; text-align: center; line-height: 50px; width: 15%; color: #666; font-weight: 400;">文本</label>
+                            <div class="contents" style="line-height: 50px; width: 80%; float: left; padding: 0px;">
+                                <input class="input_text_4" style="height: 30px; line-height: 30px; margin: 10px 0; width: 80%; padding: 0 12px; border: 1px solid #ccc;"  type="text" name="edit_input" data-type="data-pagepath" value="">
+                            </div>
+                        </div>
+					</div>
+				`,
+				btn: ['确定'],
+				btnAlign: 'c', //按钮居中
+				shade: 0.3, //不显示遮罩
+				yes: function () {
+					var urlText = `<a data-miniprogram-appid="${$('.input_text_2').val()}" data-miniprogram-path="${$('.input_text_3').val()}" data-miniprogram-url="${$('.input_text_1').val()}">${$('.input_text_4').val()}</a>`;
+					
+					var innerText = $('#innerMoster textarea').val() + urlText;
+					$('#innerMoster textarea').val(innerText);
+					layer.closeAll();
+				}
+			});
+			
+		})
+	}
+
+	function change_reply_type(obj){
+		console.log(obj.value);
+		if(obj.value == 'keywords'){
+			$(".layui-form-item.keyword").show();
+		}else{
+			$(".layui-form-item.keyword").hide();
+		}
+	}
+
+	// 上传图片
+	function FunuploadImg(i, id){
+		layui.use('upload', function(){
+			var $ = layui.jquery,
+				upload = layui.upload;
+			//普通图片上传
+			var uploadInst = upload.render({
+				elem: '#' + i,
+				data: {
+					id: id,
+					path: 'reply'
+				},
+				url: crm.api_local + '/tool/uploadImg', //改成您自己的上传接口
+				method: 'post',
+				accept: 'file',
+				done: function (res, index, upload) { //上传后的回调
+					console.log(res)
+					layer.msg(res.message);
+					if (res.code > 0) {
+						$('.scGetImg').attr('src', res.data.infos.file.src);
+						// $('.scGetImg').data('media_id', res.media_id);
+						crm.post(crm.api_local + "/WxProgram/addMaterial", {src: res.data.infos.file.src}, function(data){
+							console.log(data.media_id);
+							$('.scGetImg').attr('data-media_id', data.media_id);
+						});
+					}
+				},
+			});
+		})
+	}
+
+	// 移除关键词
+	function removeKeywords(i) {
+		$(i).parent().remove();
+	}
+
+	// 关键词返回
+	function backKeyword() {
+		$('.keywordForm').hide();
+		$('.keywordTable').show();
+	}
+
+	// 关键词提交保存
+	function Keyword_edit(i) {
+		let id = i.dataset.id;
+		id = id ? id : 'new';
+		console.log(id)
+		let rule_name = $('.rulename input').val();
+		let seq = $('.seq input').val();
+		let keywords = '';
+		let arr = [];
+		$('#keyWordArr > li').map((index, item) => {
+			arr.push($(item).children('span:first').text());
+		})
+		keywords = arr.join(',')
+		let msg_type = $('.replyContent .layui-this').text() == '文本' ? 'text' : 'image';
+		let reply_type = $('#reply_type').val();
+		let transmit_content = '';
+		let marks_1 = '';
+		if (msg_type == 'text') {
+			transmit_content = $('#innerMoster textarea').val();
+		} else {
+			transmit_content = $('.scGetImg').data('media_id');
+			marks_1 = $('.scGetImg').attr('src');
+		}
+		let p = {
+			id,
+			rule_name,
+			reply_type,
+			keywords,
+			msg_type,
+			transmit_content,
+			marks_1,
+			seq
+		}
+
+		crm.post(crm.api_local + '/WxProgram/editAutoReply.html', p, function (res) {
+			window.location.reload();
+		})
+	}
+   
+</script>
+
+</html>

@@ -1,0 +1,56 @@
+.wrap-title {
+    padding: 12px;
+    padding-left: 0;
+}
+
+.wrap-title-cot {
+    border-left: 3px solid #000;
+    padding-left: 12px;
+    margin-left: 6px;
+}
+
+.ui-grid-cards-list-3 .ui-grid-cards-item {
+    display: inline-block;
+    padding: 6px;
+    width: 33%;
+    min-width: 400px;
+}
+
+.ui-panel {
+    margin-bottom: 14px;
+    background-color: #fff;
+    box-shadow: 2px 1px 6px rgba(0, 0, 0, 0.2);
+    margin: 2px 5px 4px 1px;
+    background: #fff;
+}
+
+.ui-panel-head {
+    padding: 10px 20px;
+    background: #F9F9F9;
+    border-bottom: 1px solid #E6E6E6;
+}
+
+.ui-panel-head .grid-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ezp-card-bodyfixed {
+    max-height: 220px;
+    overflow: auto;
+}
+
+.ezp-card-body {
+    padding: 12px 20px;
+    line-height: 2;
+}
+
+.ezp-c-green {
+    color: #8bc34a;
+    cursor: pointer;
+}
+
+.ezp-c-gray {
+    color: #848583;
+}

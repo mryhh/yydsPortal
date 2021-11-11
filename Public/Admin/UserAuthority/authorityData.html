@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>用户组 - 数据权限</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<div class="layui-form">
+			<table class="layui-table" lay-even>
+				<thead>
+					<tr>
+						<td>表名</td>
+						<td>字段名</td>
+						<td>判断方式</td>
+						<td>判断条件</td>
+						<td>条件设置</td>
+					</tr>
+				</thead>
+				<tbody id="obj_arr">
+					
+				</tbody>
+			</table>
+			<div class="layui-input-block">
+				<button class="layui-btn" lay-submit lay-filter="demo">立即提交</button>
+			</div>
+		</div>
+		<div id="view_tree" class="demo-tree demo-tree-box"></div>
+	</div>
+</body>
+
+<script src="../_public/reback.js"></script>
+<script src="../_public/refresh.js"></script>
+<script type="text/javascript">
+	var this_param = crm.getParam({ admin_user_group_id: '', admin_operate_id: ''});
+
+	var tree_data = new Array();
+	var trees = new Object();
+	
+	console.log(this_param);
+
+	dataAuthority();
+
+	function dataAuthority(){
+		crm.post(
+			crm.api_local + '/UserAuthority/dataAuthority', 
+			{
+				admin_user_group_id: this_param.admin_user_group_id,
+				admin_operate_id: this_param.admin_operate_id
+			}, 
+			function(res){
+				console.log(res);
+				layui.use(['tree', 'util'], function(){
+					var tree = layui.tree,
+						layer = layui.layer,
+						util = layui.util;
+
+					//常规用法
+					tree.render({
+						elem: '#view_tree', //默认是点击节点可进行收缩
+						data: res.all_tree,
+						click: function(obj){
+							// var obj_data = obj.data;  //获取当前点击的节点数据
+							// console.log(obj);
+							where_tables(obj.data);
+						}
+					});
+
+					$.each(res.info.data_authority, function(key, val){
+						where_tables(val);
+					});
+				});
+			}
+		);
+	}
+
+	function where_tables(data){
+		console.log(data);
+		var ids = data.table_name + `.` + data.columns_name;
+
+		var html_tr = '';
+
+		//判断方式
+		var where_value_mode_arr = new Object();
+		where_value_mode_arr['eq'] = {'title':'等于', 'selected': ''};
+		where_value_mode_arr['eq'] = {'title':'等于', 'selected': ''};
+		where_value_mode_arr['neq'] = {'title':'不等于', 'selected': ''};
+		where_value_mode_arr['gt'] = {'title':'大于', 'selected': ''};
+		where_value_mode_arr['lt'] = {'title':'小于', 'selected': ''};
+		where_value_mode_arr['like'] = {'title':'相似', 'selected': ''};
+		where_value_mode_arr['in'] = {'title':'包含', 'selected': ''};
+		where_value_mode_arr['not in'] = {'title':'不包含', 'selected': ''};
+		if(data._mod){
+			where_value_mode_arr[data._mod]['selected'] = 'Y';
+		}
+
+		var html_where_value_mode = `
+							<select class="layui-input" name="where_value_mode">`;
+
+		$.each(where_value_mode_arr, function(key, val){
+			html_where_value_mode += `
+								<option value="` + key + `" ` + (val.selected == 'Y' ? 'selected="selected"' : '') + `>` + val.title + `</option>`;
+		});
+		html_where_value_mode += `
+							</select>`;
+
+		//判断条件
+		var html_where_value = ``;
+		if(data._val){
+			$.each(data._val, function(key, val){
+				html_where_value += `
+					<div class="flex-default">
+						<div name="value_div" id_value="` + val + `">` + val + `</div>
+						<div class="sp-img del-img" onclick="del_value_div(this);"><img src="../_public/images/icon-close.png" alt="删除" width="14"></div>
+					</div>
+				`;
+			})
+		}
+
+		//条件设置
+		var html_where_value_ctl = '';
+		if( data.type_value_arr ){
+			html_where_value_ctl = `
+							<select class="layui-input" lay-search lay-filter="selected_value">`;
+			$.each(data.type_value_arr, function(keyt, valuet){
+				var _selected = '';
+				// if(valuet.select_option_value == _val){
+				// 	_selected = ' selected="selected"';
+				// }
+				html_where_value_ctl += `
+								<option value="` + valuet.select_option_value + `"` + _selected + `>` + valuet.select_option_title + `</option>`;
+			});
+			html_where_value_ctl += `
+							</select>`;
+		}else{
+			html_where_value_ctl += `<input class="layui-input" value="" onblur="selected_value(this);">`;
+		}
+
+		html_tr += `
+					<tr id="` + ids + `" id_table_name="` + data.table_name + `" id_columns_name="` + data.columns_name + `">
+						<td>` + data.table_name + '(' + data._table_title + ')' + `</td>
+						<td>` + data.columns_name + '(' + data.title + ')' + `</td>
+						<td>` + html_where_value_mode + `</td>
+						<td name="where_value">` + html_where_value + `</td>
+						<td>` + html_where_value_ctl + `</td>
+					</tr>`;
+
+		var old_tr = $('#obj_arr').find('tr[id="' + ids + '"]');
+		// console.log(old_tr);
+		if(old_tr.length < 1){
+			layui.use(['form', 'element','laydate'], function(){
+				var form = layui.form,
+					element = layui.element,
+					laydate = layui.laydate;
+					$('#obj_arr').append(html_tr);
+				form.render();
+
+				form.on('select(selected_value)', function(data) { 
+					console.log(data);
+					console.log(this);
+					selected_value(this, data);
+				}); 
+
+				//监听提交
+				form.on('submit(demo)', function(){
+					var sub_tr = $('#obj_arr').find('td[name="where_value"]');
+					var sub_arr = new Array();
+					var keys = 0;
+					$.each(sub_tr, function(){
+						var _tr = $(this).parents('tr');
+						var _value_div = $(_tr).find('div[name="value_div"]');
+						if( _value_div.length > 0 ){
+							console.log(_value_div);
+
+							sub_arr[keys] = new Object();
+							sub_arr[keys]['table_name'] = $(_tr).attr('id_table_name');
+							sub_arr[keys]['columns_name'] = $(_tr).attr('id_columns_name');
+							sub_arr[keys]['where_value_mode'] = $(_tr).find('select[name="where_value_mode"]').val();
+							sub_arr[keys]['where_value'] = new Array();
+							$.each(_value_div, function(key, val){
+								sub_arr[keys]['where_value'][key] = $(val).attr('id_value');
+							});
+							keys ++;
+						}
+					});
+					console.log(sub_arr);
+
+					layer.confirm('确认提交?', function(i){
+						crm.post(
+							crm.api_local + "/UserAuthority/editDataAuthority", 
+							{
+								admin_user_group_id: this_param.admin_user_group_id,
+								admin_operate_id: this_param.admin_operate_id,
+								sub_arr: sub_arr
+							}, function(data){
+								
+							}
+						);
+						layer.close(i);
+					});
+					return false;
+				});
+			});
+		}
+	}
+	
+	function selected_value(obj, data=''){
+		var _tr = $(obj).parents('tr');
+		var where_value_mode = $(_tr).find('td select[name="where_value_mode"]').val();
+		if(data != ''){
+			var where_value = data.value;
+		}else{
+			var where_value = $(obj).val();
+		}
+
+		if( where_value == ''){
+			return false;
+		}
+
+		var html = `
+					<div class="flex-default">
+						<div name="value_div" id_value="` + where_value + `">` + where_value + `</div>
+						<div class="sp-img del-img" onclick="del_value_div(this);"><img src="../_public/images/icon-close.png" alt="删除" width="14"></div>
+					</div>`;
+		if( where_value_mode == 'in' || where_value_mode == 'not in' ){
+			$(_tr).find('td[name="where_value"]').append(html);
+		}else{
+			$(_tr).find('td[name="where_value"]').html(html);
+		}
+	}
+
+
+	// 删除
+	function del_value_div(obj){
+		layer.confirm('确定要删除吗？', { title: '温馨提示', }, function(index){
+			$(obj).parent('').remove();
+			layer.close(index);
+		})
+	}
+
+	// //初始化页面 lay-search
+	// function dataAuthority(){
+	// 	crm.post(
+	// 		crm.api_local + '/UserAuthority/dataAuthority', 
+	// 		{
+	// 			admin_user_group_id: this_param.admin_user_group_id,
+	// 			admin_operate_id: this_param.admin_operate_id
+	// 		}, 
+	// 		function(res){
+	// 			trees = res.tree;
+
+	// 			var html = `
+	// 			<tr><td colspan=5>` + res.info.title + `</td></tr>
+	// 			<tr><td>字段标题</td><td>字段名</td><td colspan=2>权限设置</td></tr>`;
+
+	// 			crm.post(
+	// 				crm.api_local + '/Portal/info', 
+	// 				{
+	// 					table_name: res.info._table_name
+	// 				}, 
+	// 				function(table_info){
+	// 					$.each(table_info.dict_columns, function(key, val){
+	// 						html += `
+	// 			<tr>
+	// 				<td col_name="` + key + `" name="title" id="title_` + key + `">` + val.title + `</td>
+	// 				<td col_name="` + key + `" name="cols" id="cols_` + key + `">` + key + `</td>
+	// 				<td col_name="` + key + `">
+	// 					<select class="layui-input">
+	// 						<option value='='>等于</option>
+	// 						<option value='>'>大于</option>
+	// 						<option value='<'>小于</option>
+	// 						<option value='in'>包含</option>
+	// 						<option value='like'>模糊</option>
+	// 					</select>
+	// 				</td>
+	// 				<td col_name="` + key + `">
+	// 					<input class="layui-input" value="">
+	// 				</td>
+	// 			</tr>`;
+	// 					});
+
+	// 					$("#obj_arr").html(html);
+
+	// 					$.each(trees, function(key, val){
+	// 						$("#cols_" + val.col).append(`&nbsp;<button class="layui-btn-primary" onclick="sourceTable(this, '` + val.s_tab + `');">展开</button>`);
+	// 					});
+	// 				}
+	// 			);
+	// 		}
+	// 	);
+	// }
+
+	// //
+	// function sourceTable(obj, table_name){
+	// 	crm.post(
+	// 		crm.api_local + '/Portal/info', 
+	// 		{
+	// 			table_name: table_name
+	// 		}, 
+	// 		function(table_info){
+	// 			var html = `<>`;
+
+	// 			$.each(table_info.dict_columns, function(key, val){
+	// 				html += `
+	// 	<tr>
+	// 		<td col_name="` + key + `" name="title" id="title_` + key + `">` + val.title + `</td>
+	// 		<td col_name="` + key + `" name="cols" id="cols_` + key + `">` + key + `</td>
+	// 		<td col_name="` + key + `">
+	// 			<select class="layui-input">
+	// 				<option value='='>等于</option>
+	// 				<option value='>'>大于</option>
+	// 				<option value='<'>小于</option>
+	// 				<option value='in'>包含</option>
+	// 				<option value='like'>模糊</option>
+	// 			</select>
+	// 		</td>
+	// 		<td col_name="` + key + `">
+	// 			<input class="layui-input" value="">
+	// 		</td>
+	// 	</tr>`;
+	// 			});
+
+	// 			$(obj).parent().parent().after(html);
+
+	// 			$.each(trees, function(key, val){
+	// 				// $("#cols_" + val.col).append(`&nbsp;<button class="layui-btn-primary" onclick="sourceTable(this, '` + val.s_tab + `');">展开</button>`);
+	// 			});
+	// 		}
+	// 	);
+	// }
+</script>

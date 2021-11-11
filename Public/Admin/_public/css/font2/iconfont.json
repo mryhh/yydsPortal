@@ -1,0 +1,114 @@
+{
+  "id": "2167813",
+  "name": "CRM后台",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "7131912",
+      "name": "二维码",
+      "font_class": "code",
+      "unicode": "e742",
+      "unicode_decimal": 59202
+    },
+    {
+      "icon_id": "1035516",
+      "name": "邀请有礼",
+      "font_class": "invitation",
+      "unicode": "e608",
+      "unicode_decimal": 58888
+    },
+    {
+      "icon_id": "2145651",
+      "name": "图片广告",
+      "font_class": "pic",
+      "unicode": "e64e",
+      "unicode_decimal": 58958
+    },
+    {
+      "icon_id": "12221354",
+      "name": "红包",
+      "font_class": "redpaper",
+      "unicode": "e602",
+      "unicode_decimal": 58882
+    },
+    {
+      "icon_id": "17808053",
+      "name": "组队瓜分积分",
+      "font_class": "carveup",
+      "unicode": "e65a",
+      "unicode_decimal": 58970
+    },
+    {
+      "icon_id": "20103679",
+      "name": "卡片",
+      "font_class": "headcard",
+      "unicode": "e6f2",
+      "unicode_decimal": 59122
+    },
+    {
+      "icon_id": "6530383",
+      "name": "红包",
+      "font_class": "pcoupon",
+      "unicode": "e621",
+      "unicode_decimal": 58913
+    },
+    {
+      "icon_id": "17938514",
+      "name": "辅助空白",
+      "font_class": "blank",
+      "unicode": "e6c4",
+      "unicode_decimal": 59076
+    },
+    {
+      "icon_id": "609031",
+      "name": "魔方",
+      "font_class": "cube",
+      "unicode": "e680",
+      "unicode_decimal": 59008
+    },
+    {
+      "icon_id": "3738719",
+      "name": "切图",
+      "font_class": "cutaway",
+      "unicode": "e63e",
+      "unicode_decimal": 58942
+    },
+    {
+      "icon_id": "13328108",
+      "name": "导航",
+      "font_class": "nav",
+      "unicode": "e6f1",
+      "unicode_decimal": 59121
+    },
+    {
+      "icon_id": "14693031",
+      "name": "表单  列表-14",
+      "font_class": "form",
+      "unicode": "e639",
+      "unicode_decimal": 58937
+    },
+    {
+      "icon_id": "20103849",
+      "name": "数据列表",
+      "font_class": "list",
+      "unicode": "e6f3",
+      "unicode_decimal": 59123
+    },
+    {
+      "icon_id": "20103859",
+      "name": "公告",
+      "font_class": "notice",
+      "unicode": "e6f4",
+      "unicode_decimal": 59124
+    },
+    {
+      "icon_id": "397898",
+      "name": "移动端，手机端",
+      "font_class": "mobile",
+      "unicode": "e61a",
+      "unicode_decimal": 58906
+    }
+  ]
+}

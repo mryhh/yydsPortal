@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>微信卡券</title>
+	<script src="../_public/head.js"></script>
+</head>
+
+<body>
+	<!-- 卡列表 -->
+	<div class="x-body">
+		<div class="table-demo">
+			<table class="layui-table" id="card_list"></table>
+		</div>
+	</div>
+	<!-- 卡列表结束 -->
+
+	<!-- 卡详情 -->
+	<div id="card_edit" style="display: none">
+		<div class="table-demo">
+			<table class="layui-table layui-col-space10">
+				<tbody id="card_info"></tbody>
+			</table>
+		</div>
+	</div>
+	<!-- 卡详情结束 -->
+
+	<script src="../_public/refresh.js"></script>
+	<script type="text/javascript">
+		cardList();
+
+		function cardList(){
+			crm.post(crm.api_local + "/wxProgram/cardList", {}, function(data){
+				var html = '';
+				html += `
+					<thead>
+						<tr>
+							<th>状态</th>
+							<th>券号</th>
+							<th>操作</th>
+						</tr>
+					</thead>
+					<tbody>`;
+				$.each(data, function(key, value){
+					if(value.card_id_list && value.card_id_list.length > 0){
+						$.each(value.card_id_list, function(keyt, valuet){
+							html += `
+						<tr>
+							<td>` + value.status + `</td>
+							<td>` + valuet + `</td>
+							<td>
+								<a class="layui-btn layui-btn-sm layui-btn-normal" onclick="cardInfo('` + valuet + `');">编辑</a>
+								<a class="layui-btn layui-btn-sm">用户</a>
+							</td>
+						</tr>`;
+						});
+					} else{
+						html += `
+						<tr>
+							<td colspan="3">` + value.status + `</td>
+						</tr>`;
+					}
+				});
+				html += `
+					</tbody>`;
+
+				$("#card_list").html(html);
+			});
+		}
+
+		function cardInfo(card_id){
+			crm.post(crm.api_local + "/wxProgram/cardInfo", {card_id: card_id}, function(data){
+				var html = '';
+
+				if(data.errmsg != 'ok'){
+					layer.msg(data.errmsg);
+				}else{
+					var _card_info_data = data.card;
+					var _card_info_conf = card_info_conf;
+
+					if(_card_info_data['card_type'] == 'MEMBER_CARD'){
+						_card_info_conf = card_info_conf_member;
+					}
+
+					$.each(_card_info_conf, function(key, value){
+						if(key == 'card_type'){
+							html += `
+					<tr>
+						<td>` + key + `</td>
+						<td>` + value.replace(_card_info_data[key], '<span style="color:red">' + _card_info_data[key] + '</span>') + `</td>
+						<td>` + _card_info_data[key] + `</td>
+					</tr>`;
+						} else{
+							html = _cardInfo(html, _card_info_data[_card_info_data.card_type.toLowerCase()][key], value, key);
+						}
+					// 	else if(typeof value == 'string'){
+					// 		html += `
+					// <tr>
+					// 	<td>` + value + `</td>
+					// 	<td>` + data[data.card_type.toLowerCase()][key] + `</td>
+					// </tr>`;
+					// 	}else if(typeof value == 'object'){
+					// 		$.each(value.list, function(keyt, valuet){
+					// 			html += `
+					// <tr>
+					// 	<td>` + valuet + `</td>
+					// 	<td>` + data[data.card_type.toLowerCase()][key][keyt] + `</td>
+					// </tr>`;
+					// 		});
+					// 	}
+					});
+				}
+
+				$("#card_info").html(html);
+
+				layer.open({
+					type: 1,
+					title: '券号 ' + card_id,
+					content: $('#card_edit'),
+					area: [($(window).width() * 0.9) + 'px', ($(window).height() - 60) + 'px'],
+					shade: 0.5,
+				});
+			});
+		}
+
+		//递归
+		function _cardInfo(html, card_info_data, conf_value, conf_key, json_color){
+			var bg = '';
+			if(json_color){
+				bg = ` style="background-color:` + json_color + `;"`;
+			}
+			var td_w = ` style="width: 128px;"`;
+
+			//把图片地址变为图片
+			// if(typeof card_info_data == 'string'){
+			// 	if( card_info_data.indexOf('http://') == 0 || card_info_data.indexOf('https://') == 0 ){
+			// 		card_info_data = `<img src="` + card_info_data + `">`;
+			// 	}
+			// }
+			//可以编辑的项目
+			if((typeof card_info_data == 'string' || typeof card_info_data == 'undefined') && edit_card_info_conf[conf_key]){
+				card_info_data = `<input class="layui-input" value="` + card_info_data + `">`;
+			}
+
+			if(typeof conf_value == 'string'){
+				html += `
+					<tr` + bg + `>
+						<td` + td_w + `>` + conf_key + `</td>
+						<td>` + conf_value.replace(card_info_data, '<span style="color:red">' + card_info_data + '</span>') + `</td>
+						<td>` + card_info_data + `</td>
+					</tr>`;
+			}else if(typeof conf_value == 'object'){
+				html += `
+					<tr` + bg + `>
+						<td` + td_w + `>` + conf_key + `</td>
+						<td>` + conf_value.title.replace(card_info_data, '<span style="color:red">' + card_info_data + '</span>') + `</td>
+						<td></td>
+					</tr>`;
+				if(conf_value.list){
+					var _json_color = color_list[crm.rands(0,color_list.length)];
+					$.each(conf_value.list, function(key, value){
+						if(card_info_data && card_info_data[key]){
+							html = _cardInfo(html, card_info_data[key], value, key, _json_color);
+						}
+					});
+				}
+			}
+			return html;
+		}
+		// function _cardInfo(card_info_data, conf_value, conf_key, json_color){
+		//	var bg = ` style="background-color:` + json_color + `"`;
+		// 	var _html = '';
+		// 	var _html_td = '';
+		// 	if(json_color == '#ffffff'){
+		// 		_html += `
+		// 			<tr>`;
+		// 	}
+		// 	if(typeof conf_value == 'string'){
+		// 		//把图片地址变为图片
+		// 		// if(typeof card_info_data == 'string'){
+		// 		// 	if( card_info_data.indexOf('http://') == 0 || card_info_data.indexOf('https://') == 0 ){
+		// 		// 		card_info_data = `<img src="` + card_info_data + `">`;
+		// 		// 	}
+		// 		// }
+		// 		_html += `
+		// 				<td` + bg + `>` + conf_key + `</td>
+		// 				<td` + bg + `>` + conf_value.replace(card_info_data, '<span style="color:red">' + card_info_data + '</span>') + `</td>
+		// 				<td` + bg + `>` + card_info_data + `</td>`;
+		// 	}else if(typeof conf_value == 'object'){
+		// 		if(conf_value.list){
+		// 			var _json_color = color_list[crm.rands(0,color_list.length)];
+		// 			$.each(conf_value.list, function(key, value){
+		// 				_html_td += _cardInfo(card_info_data[key], value, key, _json_color);
+		// 			});
+		// 		}
+		// 		_html += `
+		// 				<td` + bg + ` rowspan="` + _html_td.split('</td>').length-1 + `">` + conf_key + `</td>
+		// 				<td` + bg + ` rowspan="` + _html_td.split('</td>').length-1 + `">` + conf_value.title.replace(card_info_data, '<span style="color:red">' + card_info_data + '</span>') + `</td>
+		// 				<td` + bg + `>` + _html_td + `</td>`;
+		// 	}
+		// 	if(json_color == '#ffffff'){
+		// 		_html += `
+		// 			</tr>`;
+		// 	}
+
+		// 	return _html;
+		// }
+
+	var card_info_conf = {
+		'card_type'			: '卡券类型：<br>团购券：GROUPON;<br>折扣券：DISCOUNT;<br>礼品券：GIFT;<br>代金券：CASH;<br>通用券：GENERAL_COUPON;<br>会员卡：MEMBER_CARD;<br>景点门票：SCENIC_TICKET；<br>电影票：MOVIE_TICKET；<br>飞机票：BOARDING_PASS；<br>会议门票：MEETING_TICKET；<br>汽车票：BUS_TICKET;',
+		'base_info'			: {
+			'title'	: '基本的卡券数据，见下表，所有卡券通用。', 
+			'list'	: {
+				'id'				: '卡号',
+				'logo_url'			: '卡券的商户logo，建议像素为300*300。',
+				'code_type'			: 'CODE_TYPE_TEXT，文本；<br>CODE_TYPE_BARCODE，一维码；<br>CODE_TYPE_QRCODE，二维码；<br>CODE_TYPE_ONLY_QRCODE,二维码无code显示；<br>CODE_TYPE_ONLY_BARCODE,一维码无code显示；',
+				'brand_name'		: '商户名字（填写直接提供服务的商户名，第三方商户名填写在source字段）。',
+				'title'				: '卡券名。',
+				'color'				: '卡券的背景颜色。',
+				'notice'			: '使用提醒，字数上限为16个汉字。',
+				'description'		: '使用说明。长文本描述。',
+				'date_info'			: {	
+					'title'	: '使用日期，有效期的信息。', 
+					'list'	: {
+						'type'				: '时间类型',
+						'begin_timestamp'	: '开始时间（时间戳）',
+						'end_timestamp'		: '结束时间（时间戳）',
+						'fixed_term'		: '未知参数',
+						'fixed_begin_term'	: '未知参数',
+					}
+				},
+				'type'				: '使用时间的类型DATE_TYPE_FIX_TIME_RANGE表示固定日期区间，DATE_TYPE_FIX_TERM表示固定时长（自领取后按天算），DATE_TYPE_PERMANENT表示永久有效（会员卡类型专用）。',
+				'begin_timestamp'	: 'type为DATE_TYPE_FIX_TIME_RANGE时专用，表示起用时间。从1970年1月1日00:00:00至起用时间的秒数，最终需转换为字符串形态传入，下同。（单位为秒）',
+				'end_timestamp'		: 'type为DATE_TYPE_FIX_TIME_RANGE时专用，表示结束时间。（单位为秒）',
+				'fixed_term'		: 'type为DATE_TYPE_FIX_TERM时专用，表示自领取后多少天内有效，领取后当天有效填写0。（单位为天）',
+				'fixed_begin_term'	: 'type为DATE_TYPE_FIX_TERM时专用，表示自领取后多少天开始生效。（单位为天）',
+				'sku'				: {	
+					'title'	: '商品信息', 
+					'list'	: {
+						'quantity'			: '卡券现有库存的数量',
+						'total_quantity'	: '卡券全部库存的数量，上限为100000000。',
+					}
+				},
+				'location_id_list'	: {	
+					'title'	: '门店位置ID', 
+					'list'	: {
+					}
+				},
+				'use_all_locations'	: '支持全部门店，填写true或false，与location_id_list互斥',
+				'use_custom_code'	: '是否自定义Code码。填写true或false，默认为false。',
+				'bind_openid'		: '是否指定用户领取，填写true或false。默认为否。',
+				'can_share'			: '卡券是否可转赠，填写true或false，true代表可转赠默认为true。',
+				'service_phone'		: '客服电话。',
+				'source'			: '第三方来源名，例如同程旅游、大众点评。',
+				'custom_url_name'	: '商户自定义入口名称。',
+				'custom_url'		: '商户自定义入口跳转外链的地址链接，跳转页面内容需与自定义cell名称保持匹配。',
+				'custom_url_sub_title'		: '显示在入口右侧的tips，长度限制在6个汉字内。',
+				'promotion_url_name'		: '营销场景的自定义入口。',
+				'promotion_url'				: '入口跳转外链的地址链接。',
+				'promotion_url_sub_title'	: '显示在营销入口右侧的提示语。',
+				'custom_url_name'			: '商户自定义入口名称。',
+				'status'					: 'CARD_STATUS_NOT_VERIFY,待审核；<br>CARD_STATUS_VERIFY_FAIL,审核失败；<br>CARD_STATUS_VERIFY_OK，通过审核；<br>CARD_STATUS_DELETE，卡券被商户删除；<br>CARD_STATUS_DISPATCH，在公众平台投放过的卡券；',
+			}
+		},
+		'deal_detail'		: '团购券专用字段，团购详情。',
+		'gift'				: '礼品券专用，表示礼品名字。',
+		'least_cost'		: 'least_cost字段为代金券专用，表示起用金额（单位为分）。',
+		'reduce_cost'		: '代金券专用，表示减免金额（单位为分）',
+		'discount'			: '折扣券专用字段，表示打折额度（百分比），例：填30为七折团购详情。',
+		'supply_balance'	: '会员卡专属字段，表示是否支持积分，填写true或false，如填写true，积分相关字段均为必填，会员卡专用',
+		'supply_bonus'		: '会员卡专属字段，表示否支持储值，填写true或false，如填写true，储值相关字段均为必填，会员卡专用。',
+		'bonus_cleared'		: '积分清零规则，会员卡专用。',
+		'bonus_rules'		: '积分规则，会员卡专用。',
+		'balance_rules'		: '储值规则，会员卡专用。',
+		'prerogative'		: '会员卡专属字段，表示特权说明，会员卡专用。',
+		'bind_old_card_url'	: '绑定旧卡的url，会员卡专用。',
+		'activate_url'		: '激活会员卡，会员卡专用。',
+		'need_push_on_view'	: '进入会员卡时是否推送事件，填写true或false，会员卡专用。',
+		'from'				: '飞机票的起点，上限为18个汉字，机票专用。',
+		'to'				: '飞机票的终点，上限为18个汉字，机票专用。',
+		'flight'			: '航班，机票专用。',
+		'departure_time'	: '起飞时间，机票专用。（Unix时间戳格式）',
+		'landing_time'		: '降落时间，机票专用。（Unix时间戳格式）',
+		'check_in_url'		: '在线值机的链接，机票专用。',
+		'gate'				: '登机口。如发生登机口变更，建议商家实时调用该接口变更，机票专用。',
+		'boarding_time'		: '登机时间，只显示“时分不显示日期，机票专用。（Unix时间戳格式）',
+		'meeting_detail'	: '会议详情，会议门票专用。',
+		'map_url'			: '会场导览图，会议门票专用。',
+	};
+
+	var card_info_conf_member = {
+		'card_type' 					: '是	string 			<br>会员卡类型：<br>团购券：GROUPON;<br>折扣券：DISCOUNT;<br>礼品券：GIFT;<br>代金券：CASH;<br>通用券：GENERAL_COUPON;<br>会员卡：MEMBER_CARD;<br>景点门票：SCENIC_TICKET；<br>电影票：MOVIE_TICKET；<br>飞机票：BOARDING_PASS；<br>会议门票：MEETING_TICKET；<br>汽车票：BUS_TICKET;',
+		'background_pic_url'			: '否	string(128)		<br>商家自定义会员卡背景图，须先调用上传图片接口将背景图上传至CDN，否则报错，卡面设计请遵循微信会员卡自定义背景设计规范，像素大小控制在	1000像素*600像素以下',
+		'base_info'						: {
+			'title'							: '是	JSON			<br>基本的卡券数据，见下表，所有卡券类型通用。',
+			'list'							: {
+				'logo_url' 						: '是	string(128)		卡券的商户logo，建议像素为300*300。',
+				'code_type' 					: '是	string(16)		Code展示类型，"CODE_TYPE_TEXT"文本，"CODE_TYPE_BARCODE"一维码，"CODE_TYPE_QRCODE"二维码，"CODE_TYPE_ONLY_QRCODE"仅显示二维码，"CODE_TYPE_ONLY_BARCODE"仅显示一维码，"CODE_TYPE_NONE"不显示任何码型',
+				'pay_info'						: {
+					'title'							: '否	JSON			支付功能结构体，swipe_card结构',
+					'list'							: {
+						'swipe_card'					: {
+							'title'							: '否	JSON			刷卡功能结构体，包含is_swipe_card字段',
+							'list'							: {
+								'is_swipe_card'					: '否	bool			是否设置该会员卡支持拉出微信支付刷卡界面',
+							}
+						},
+					},
+				},
+				'is_pay_and_qrcode'				: '否	bool			是否设置该会员卡中部的按钮同时支持微信支付刷卡和会员卡二维码',
+				'brand_name'					: '是	string			商户名字,字数上限为12个汉字。',
+				'title'							: '是	string			卡券名，字数上限为9个汉字	(建议涵盖卡券属性、服务及金额)。',
+				'color'							: '是	string			券颜色。按色彩规范标注填写Color010-Color100',
+				'notice'						: '是	string			卡券使用提醒，字数上限为16个汉字。',
+				'description'					: '是	string			卡券使用说明，字数上限为1024个汉字。',
+				'sku'							: {	
+					'title'							: '是	JSON			商品信息。', 
+					'list'							: {
+						'quantity'						: '是	int				卡券库存的数量，不支持填写0，上限为100000000。',
+						'total_quantity'				: '卡券全部库存的数量，上限为100000000。',
+					}
+				},
+				'date_info'						: {	
+					'title'							: '是	JSON			使用日期，有效期的信息。', 
+					'list'							: {
+						'type'							: '是	string			使用时间的类型支持固定时长有效类型固定日期有效类型永久有效类型(DATE_TYPE_PERMANENT)',
+						'begin_timestamp'				: '否	int				type为DATE_TYPE_FIX_TIME_RANGE时专用，表示起用时间。从1970年1月1日00:00:00至起用时间的秒数（东八区时间,UTC+8，单位为秒	）',
+						'end_timestamp'					: '否	int				type为DATE_TYPE_FIX_TERM_RANGE时专用，表示结束时间（东八区时间,UTC+8，单位为秒）',
+						'fixed_term'					: '否	int				type为DATE_TYPE_FIX_TERM时专用，表示自领取后多少天内有效，领取后当天有效填写0（单位为天）',
+						'fixed_begin_term'				: '否	int				type为DATE_TYPE_FIX_TERM时专用，表示自领取后多少天开始生效。（单位为天）',
+					}
+				},
+				'location_id_list'				: {	
+					'title'							: '门店位置ID', 
+					'list'							: {
+					}
+				},
+				'use_custom_code'				: '否	bool			是否自定义Code码。填写true或false，默认为false通常自有优惠码系统的开发者选择自定义Code码，详情见是否自定义code',
+				'bind_openid'					: '否	bool			是否指定用户领取，填写true或false。默认为false',
+				'service_phone'					: '否	string（24）		客服电话',
+				'use_all_locations'				: '否	bool			会员卡是否支持全部门店，填写后商户门店更新时会自动同步至卡券',
+				'center_title'					: '否	string（18）		卡券中部居中的按钮，仅在卡券激活后且可用状态时显示',
+				'center_sub_title'				: '否	string（24）		显示在入口下方的提示语，仅在卡券激活后且可用状态时显示',
+				'center_url'					: '否	string（128）	顶部居中的url，仅在卡券激活后且可用状态时显示',
+				'custom_url_name'				: '否	string（15）		自定义跳转外链的入口名字。',
+				'custom_url'					: '否	string（128）	自定义跳转的URL。',
+				'custom_url_sub_title'			: '否	string（18）		显示在入口右侧的提示语。',
+				'promotion_url_name'			: '否	string（15）		营销场景的自定义入口名称。',
+				'promotion_url'					: '否	string（128）	入口跳转外链的地址链接。',
+				'promotion_url_sub_title'		: '否	string（18）		显示在营销入口右侧的提示语。',
+				'get_limit'						: '否	int				每人可领券的数量限制，建议会员卡每人限领一张',
+				'can_share'						: '否	bool			卡券领取页面是否可分享，默认为true',
+				'can_give_friend'				: '否	bool			卡券是否可转赠,默认为true',
+				'need_push_on_view'				: '否	bool			填写true为用户点击进入会员卡时推送事件，默认为false。详情见	进入会员卡事件推送',
+			},
+		},
+		'prerogative'					: '是	string(3072)	<br>会员卡特权说明，限制1024汉字。',
+		'auto_activate'					: '否	bool			<br>设置为true时用户领取会员卡后系统自动将其激活，无需调用激活接口，详情见自动激活	。',
+		'wx_activate'					: '否	bool			<br>设置为true时会员卡支持一键开卡，不允许同时传入activate_url字段，否则设置wx_activate失效。填入该字段后仍需调用接口设置开卡项方可生效，详情见一键开卡。',
+		'supply_bonus'					: '是	bool			<br>显示积分，填写true或false，如填写true，积分相关字段均为必填若设置为true则后续不可以被关闭。',
+		'bonus_url'						: '否	string(128)		<br>设置跳转外链查看积分详情。仅适用于积分无法通过激活接口同步的情况下使用该字段。',
+		'supply_balance'				: '是	bool			<br>是否支持储值，填写true或false。如填写true，储值相关字段均为必填若设置为true则后续不可以被关闭。该字段须开通储值功能后方可使用，详情见：	获取特殊权限',
+		'balance_url'					: '否	string(128)		<br>设置跳转外链查看余额详情。仅适用于余额无法通过激活接口同步的情况下使用该字段。',
+		'custom_field1'					: {
+			'title'							: '否	JSON结构			<br>自定义会员信息类目，会员卡激活后显示，包含name_type(name)和url字段',
+			'list'							: {
+				'name_type'						: '否	string(24)		<br>会员信息类目半自定义名称，当开发者变更这类类目信息的value值时	可以选择触发系统模板消息通知用户。FIELD_NAME_TYPE_LEVEL	等级FIELD_NAME_TYPE_COUPON优惠券FIELD_NAME_TYPE_STAMP印花	FIELD_NAME_TYPE_DISCOUNT折扣	FIELD_NAME_TYPE_ACHIEVEMEN成就FIELD_NAME_TYPE_MILEAGE里程FIELD_NAME_TYPE_SET_POINTS集点FIELD_NAME_TYPE_TIMS次数',
+				'name'							: '否	string(24)		<br>会员信息类目自定义名称，当开发者变更这类类目信息的value值时不会触发系统模板消息通知用户',
+				'url'							: '否	string（128）	<br>点击类目跳转外链url',
+				// 'app_brand_user_name'			: '未知参数',
+				// 'app_brand_pass'				: '未知参数',
+			}
+		},
+		'custom_field2'					: {
+			'title'							: '否	JSON结构			<br>自定义会员信息类目，会员卡激活后显示，包含name_type(name)和url字段',
+			'list'							: {
+				'name_type'						: '否	string(24)		<br>会员信息类目半自定义名称，当开发者变更这类类目信息的value值时	可以选择触发系统模板消息通知用户。FIELD_NAME_TYPE_LEVEL	等级FIELD_NAME_TYPE_COUPON优惠券FIELD_NAME_TYPE_STAMP印花	FIELD_NAME_TYPE_DISCOUNT折扣	FIELD_NAME_TYPE_ACHIEVEMEN成就FIELD_NAME_TYPE_MILEAGE里程FIELD_NAME_TYPE_SET_POINTS集点FIELD_NAME_TYPE_TIMS次数',
+				'name'							: '否	string(24)		<br>会员信息类目自定义名称，当开发者变更这类类目信息的value值时不会触发系统模板消息通知用户',
+				'url'							: '否	string（128）	<br>点击类目跳转外链url',
+				// 'app_brand_user_name'			: '未知参数',
+				// 'app_brand_pass'				: '未知参数',
+			}
+		},
+		'custom_field3'					: {
+			'title'							: '否	JSON结构			<br>自定义会员信息类目，会员卡激活后显示，包含name_type(name)和url字段',
+			'list'							: {
+				'name_type'						: '否	string(24)		<br>会员信息类目半自定义名称，当开发者变更这类类目信息的value值时	可以选择触发系统模板消息通知用户。FIELD_NAME_TYPE_LEVEL	等级FIELD_NAME_TYPE_COUPON优惠券FIELD_NAME_TYPE_STAMP印花	FIELD_NAME_TYPE_DISCOUNT折扣	FIELD_NAME_TYPE_ACHIEVEMEN成就FIELD_NAME_TYPE_MILEAGE里程FIELD_NAME_TYPE_SET_POINTS集点FIELD_NAME_TYPE_TIMS次数',
+				'name'							: '否	string(24)		<br>会员信息类目自定义名称，当开发者变更这类类目信息的value值时不会触发系统模板消息通知用户',
+				'url'							: '否	string（128）	<br>点击类目跳转外链url',
+				// 'app_brand_user_name'			: '未知参数',
+				// 'app_brand_pass'				: '未知参数',
+			}
+		},
+		// 'custom_field2'					: '否	JSON结构			<br>自定义会员信息类目，会员卡激活后显示，包含name_type(name)和url字段',
+		// 'custom_field3'					: '否	JSON结构			<br>自定义会员信息类目，会员卡激活后显示，包含name_type(name)和url字段',
+		// 'name_type'						: '否	string(24)		<br>会员信息类目半自定义名称，当开发者变更这类类目信息的value值时	可以选择触发系统模板消息通知用户。FIELD_NAME_TYPE_LEVEL	等级FIELD_NAME_TYPE_COUPON优惠券FIELD_NAME_TYPE_STAMP印花	FIELD_NAME_TYPE_DISCOUNT折扣	FIELD_NAME_TYPE_ACHIEVEMEN成就FIELD_NAME_TYPE_MILEAGE里程FIELD_NAME_TYPE_SET_POINTS集点FIELD_NAME_TYPE_TIMS次数',
+		// 'name'							: '否	string(24)		<br>会员信息类目自定义名称，当开发者变更这类类目信息的value值时不会触发系统模板消息通知用户',
+		// 'url'							: '否	string（128）	<br>点击类目跳转外链url',
+		'bonus_cleared'					: '否	string（128）	<br>积分清零规则。',
+		'bonus_rules'					: '否	string（128）	<br>积分规则。',
+		'balance_rules'					: '否	string（128）	<br>储值说明。',
+		'activate_url'					: '否	string（128）	<br>激活会员卡的url。',
+		'activate_app_brand_user_name'	: '否	string（128）	<br>激活会员卡url对应的小程序user_name，仅可跳转该公众号绑定的小程序',
+		'activate_app_brand_pass'		: '否	string（128）	<br>激活会员卡url对应的小程序path',
+		'custom_cell1'					: {
+			'title'							: '否	JSON结构			<br>自定义会员信息类目，会员卡激活后显示。',
+			'list'							: {
+				'name'							: '否	string(24)		<br>会员信息类目自定义名称，当开发者变更这类类目信息的value值时不会触发系统模板消息通知用户',
+				'tips'							: '是	string(18)		<br>入口右侧提示语，6个汉字内。',
+				'url'							: '否	string（128）	<br>点击类目跳转外链url',
+				// 'app_brand_user_name'			: '未知参数',
+				// 'app_brand_pass'				: '未知参数',
+			}
+		},
+		// 'custom_cell1'					: '否	JSON结构			<br>自定义会员信息类目，会员卡激活后显示。',
+		// 'name'							: '是	string(15)		<br>入口名称。',
+		// 'tips'							: '是	string(18)		<br>入口右侧提示语，6个汉字内。',
+		// 'url'							: '是	string(128)		<br>入口跳转链接。',
+		// 'bonus_rule'					: '否	JSON结构			<br>积分规则	。',
+		'cost_money_unit'				: '否	int				<br>消费金额。以分为单位。',
+		'increase_bonus'				: '否	int				<br>对应增加的积分。',
+		'max_increase_bonus'			: '否	int				<br>用户单次可获取的积分上限。',
+		'init_increase_bonus'			: '否	int				<br>初始设置积分。',
+		'cost_bonus_unit'				: '否	int				<br>每使用X积分。',
+		'reduce_money'					: '否	int				<br>抵扣xx元，（这里以分为单位）',
+		'least_money_to_use_bonus'		: '否	int				<br>抵扣条件，满xx元（这里以分为单位）可用。',
+		'max_reduce_bonus'				: '否	int				<br>抵扣条件，单笔最多使用xx积分。',
+		'discount'						: '否	int				<br>折扣，该会员卡享受的折扣优惠,填10就是九折。',
+	};
+
+	var edit_card_info_conf = {
+		'activate_app_brand_user_name'		: '1',
+		'activate_app_brand_pass'			: '1',	
+	};
+
+	var demo_str = `{
+	    "code":"1",
+	    "message":"ok",
+	    "data":{
+	        "errcode":0,
+	        "errmsg":"ok",
+	        "card":{
+	            "card_type":"MEMBER_CARD",
+	            "member_card":{
+	                "base_info":{
+	                    "id":"pPgLYwrcWSTWUArrAwhtGwXwHOO0",
+	                    "logo_url":"http://mmbiz.qpic.cn/mmbiz_jpg/K7fKLMczeiaiaFlnAUB1Xic68icYGtL6satHpOicc4e8V8ju8zd1F7P7CbDwibU5T6ws5xSypFo3OkHicuSIENxiaBYL3g/0",
+	                    "code_type":"CODE_TYPE_BARCODE",
+	                    "brand_name":"纪念日百货-test",
+	                    "title":"纪念日会员卡",
+	                    "date_info":{
+	                        "type":"DATE_TYPE_PERMANENT",
+	                        "begin_timestamp":0,
+	                        "end_timestamp":0,
+	                        "fixed_term":0,
+	                        "fixed_begin_term":0
+	                    },
+	                    "color":"#cf3e36",
+	                    "notice":"请到店出示会员卡",
+	                    "description":"适用于纪念日百货所有门店以及线上官方商城，仅限本人使用",
+	                    "location_id_list":[
+
+	                    ],
+	                    "use_limit":0,
+	                    "get_limit":1,
+	                    "can_share":true,
+	                    "can_give_friend":false,
+	                    "use_custom_code":false,
+	                    "bind_openid":false,
+	                    "status":"CARD_STATUS_VERIFY_OK",
+	                    "sku":{
+	                        "quantity":99999815,
+	                        "total_quantity":100000000
+	                    },
+	                    "create_time":1572935973,
+	                    "update_time":1575449991,
+	                    "custom_url_name":"",
+	                    "custom_url":"",
+	                    "custom_url_sub_title":"",
+	                    "custom_app_brand_user_name":"",
+	                    "custom_app_brand_pass":"",
+	                    "promotion_url":"",
+	                    "promotion_url_name":"",
+	                    "promotion_url_sub_title":"",
+	                    "promotion_app_brand_user_name":"",
+	                    "promotion_app_brand_pass":"",
+	                    "need_push_on_view":true,
+	                    "use_all_locations":true,
+	                    "center_title":"",
+	                    "center_sub_title":"",
+	                    "center_url":"",
+	                    "area_code_list":[
+
+	                    ],
+	                    "pay_info":{
+	                        "swipe_card":{
+	                            "use_mid_list":[
+
+	                            ],
+	                            "is_swipe_card":false
+	                        }
+	                    },
+	                    "use_dynamic_code":false,
+	                    "is_pay_and_qrcode":true,
+	                    "max_give_friend_times":0
+	                },
+	                "supply_bonus":false,
+	                "bonus_url":"",
+	                "bonus_app_brand_user_name":"",
+	                "bonus_app_brand_pass":"",
+	                "supply_balance":false,
+	                "prerogative":"持有会员IP卡购物：任意消费1笔即可升级贵人卡。<br>持有会员VIP卡购物：1.全场正价商品享受9折优惠 2.每消费1元，可获得1积分。<br>持有会员SVIP卡购物：1.全场正价商品享受8折优惠 2.每消费1元，可获得1积分",
+	                "activate_url":"",
+	                "discount":0,
+	                "custom_cell1":{
+	                    "name":"",
+	                    "tips":"",
+	                    "url":"",
+	                    "app_brand_user_name":"",
+	                    "app_brand_pass":""
+	                },
+	                "auto_activate":false,
+	                "wx_activate":true,
+	                "custom_field1":{
+	                    "name_type":"FIELD_NAME_TYPE_COUPON",
+	                    "url":"https://m-tp.ezrpro.cn/coupon/mycoupons/485",
+	                    "app_brand_user_name":"",
+	                    "app_brand_pass":""
+	                },
+	                "custom_field2":{
+	                    "name_type":"FIELD_NAME_TYPE_LEVEL",
+	                    "url":"https://m-tp.ezrpro.cn/vip/vipinfo/485",
+	                    "app_brand_user_name":"",
+	                    "app_brand_pass":""
+	                },
+	                "custom_field3":{
+	                    "name_type":"FIELD_NAME_TYPE_UNKNOW",
+	                    "url":"",
+	                    "app_brand_user_name":"",
+	                    "app_brand_pass":""
+	                },
+	                "background_pic_url":"",
+	                "wx_activate_after_submit":true,
+	                "wx_activate_after_submit_url":"https://m-tp.ezrpro.cn/vip/wxcardsubmit/485",
+	                "advanced_info":{
+	                    "time_limit": [],
+	                    "text_image_list": [],
+	                    "business_service": [],
+	                    "consume_share_card_list": [],
+	                    "share_friends": false
+	                }
+	            }
+	        }
+	    }
+	}`;
+
+	var color_list = ['#F0F8FF','#FAEBD7','#7FFFD4','#F0FFFF','#F5F5DC','#FFE4C4','#FFEBCD','#A52A2A','#DEB887','#5F9EA0','#D2691E','#FF7F50','#6495ed','#6495ED','#FFF8DC','#DC143C','#B8860B','#A9A9A9','#BDB76B','#9932CC','#E9967A','#8FBC8B','#2F4F4F','#FF1493','#1E90FF','#B22222','#FFFAF0','#DCDCDC','#F8F8FF','#DAA520','#808080','#ADFF2F','#F0FFF0','#FF69B4','#CD5C5C','#F0E68C','#E6E6FA','#FFF0F5','#FFFACD','#ADD8E6','#F08080','#E0FFFF','#FAFAD2','#90EE90','#D3D3D3','#FFB6C1','#FFA07A','#20B2AA','#87CEFA','#778899','#B0C4DE','#FFFFE0','#32CD32','#FAF0E6','#66CDAA','#BA55D3','#9370DB','#3CB371','#7B68EE','#48D1CC','#C71585','#191970','#F5FFFA','#FFE4E1','#FFE4B5','#FFDEAD','#FDF5E6','#DA70D6','#EEE8AA','#98FB98','#AFEEEE','#DB7093','#FFEFD5','#FFDAB9','#CD853F','#FFC0CB','#DDA0DD','#B0E0E6','#BC8F8F','#4169E1','#8B4513','#FA8072','#F4A460','#FFF5EE','#A0522D','#C0C0C0','#87CEEB','#708090','#FFFAFA','#4682B4','#D2B48C','#D8BFD8','#FF6347','#40E0D0','#EE82EE','#F5DEB3','#F5F5F5','#9ACD32'];
+	
+	</script>
+
+
+</body>
+</html>

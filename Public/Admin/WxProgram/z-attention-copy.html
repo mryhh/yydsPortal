@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title></title>
+    <link rel="stylesheet" href="../_public/css/attention.css">
+    <script src="../_public/head.js"></script>
+    <!-- <script src='../_public/lib/layui/lay/modules/layer.js'></script> -->
+    <style type="text/css">
+
+    </style>
+</head>
+
+<body>
+    <div class="attention">
+        <!-- 第一层tab -->
+        <div class="layui-tab layui-tab-brief">
+            <ul class="layui-tab-title">
+                <li class="layui-this" onclick="tab1(this)">被关注后自动回复</li>
+                <li onclick="tab2(this)">消息自动回复</li>
+                <li onclick="tab3(this)">关键词自动回复</li>
+            </ul>
+
+            <div class="layui-tab-content" id="outerMoster">
+
+            </div>
+            <!-- 底部 -->
+            <div id="saveBtn"
+                style="background: #ffffff; bottom: 0; width: 100%; right: 0; left: 0; position: fixed;text-align:center;padding: 10px 0;">
+                <button onclick="menu_edit();"
+                    style="color: #fff;background-color: #8bc34a;padding: 12px 12px;border:none;width:120px;border-radius: 2px">
+                    保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="uploadImg">
+        <div class="layui-tab layui-tab-brief" id="showPhoneBuild">
+            <!-- 底部 -->
+            <div
+                style="background: #ffffff; bottom: 0; width: 100%; right: 0; left: 0; position: fixed;text-align:center;padding: 10px 0;">
+                <button onclick="menu_edit();"
+                    style="color: #fff;background-color: #8bc34a;padding: 12px 12px;border:none;width:120px;border-radius: 2px">
+                    保存
+                </button>
+                <button onclick="menu_back();"
+                    style="background-color: #fff;padding: 12px 12px;border:1px solid #ccc;margin-left: 10px;width:120px;border-radius: 2px">
+                    返回
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    </div>
+
+</body>
+
+<script type="text/javascript">
+    $(function () {
+        tab1();
+    })
+
+
+    let arr = [];
+    let obj = {};
+
+    function tab1(i) {
+        $('#saveBtn').show();
+        $(i).addClass('layui-this');
+        $(i).siblings().removeClass('layui-this');
+        $('#outerMoster').html(
+            `<div class="layui-tab-item layui-show">
+                    <!-- 页面中的tab -->
+                    <div class="profile-page">
+                        <div class="profile">
+                            <div class="layui-tab layui-tab-brief">
+                                <ul class="layui-tab-title">
+                                    <li class="layui-this" onclick="setText(this)">文本</li>
+                                    <!--<li onclick="setContext(this)">图文</li>-->
+                                    <li onclick="setImg(this)">图片</li>
+                                    <li onclick="setProgram(this)">小程序</li>
+                                </ul>
+                                <div class="layui-tab-content" id="innerMoster">
+                                    <div class="layui-tab-item layui-show" data-type="auto">
+                                        <textarea placeholder="请输入内容" value="123" class="layui-textarea" rows="10"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`
+        )
+    }
+    function tab2(i) {
+        $(i).addClass('layui-this');
+        $('#saveBtn').show();
+        $(i).siblings().removeClass('layui-this');
+        $('#outerMoster').html(
+            `<div class="layui-tab-item layui-show">
+                    <!-- 页面中的tab -->
+                    <div class="profile-page">
+                        <div class="profile">
+                            <div class="layui-tab layui-tab-brief">
+                                <ul class="layui-tab-title">
+                                    <li class="layui-this" onclick="setText(this)">文本</li>
+                                    <!--<li onclick="setContext(this)">图文</li>-->
+                                    <li onclick="setImg(this)">图片</li>
+                                    <li onclick="setProgram(this)">小程序</li>
+                                </ul>
+                                <div class="layui-tab-content" id="innerMoster">
+                                    <div class="layui-tab-item layui-show" data-type="auto">
+                                        <textarea placeholder="请输入内容" value="123" class="layui-textarea" rows="10"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`
+        )
+    }
+
+    function tab3(i) {
+        $(i).addClass('layui-this');
+        $(i).siblings().removeClass('layui-this');
+        $('#saveBtn').hide();
+        $('#outerMoster').html(
+            `<div class="layui-tab-item layui-show keywordTable">
+                    <button class="ui-btn ui-btn-green" style="color: #fff;background-color: #8bc34a;border:none; padding: 10px; border-radius: 2px; border-color: #8bc34a" onclick="keywordShow()">
+                        <span class="glyphicon glyphicon-plus"></span> 新建规则
+                    </button>
+                    <!-- 页面中的tab -->
+                    <table class="layui-hide" id="test" lay-filter="test">
+                        
+                    </table>
+                    <div id="barDemo" style="display: none;">
+                        <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a><a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+                    </div>
+            </div>`
+        )
+        $.get('http://10.100.21.105/AdminApi/weixin/getkeywordsMsgList?pageNumber=1&pageSize=10&reply_type=self', {},
+            function (res) {
+                var list = res;
+                var table = layui.table;
+                var col = [
+                    [{
+                        field: 'rule_name',
+                        title: '规则名称'
+                    }, {
+                        field: 'keywords',
+                        title: '关键词'
+                    }, {
+                        field: 'reply_type',
+                        title: '回复消息类型',
+                        templet: function (d) {
+                            if (d.reply_type == 'attention') {
+                                return '被关注后自动回复'
+                            } else if (d.reply_type == 'activity') {
+                                return '消息自动回复'
+                            } else {
+                                return '关键词自动回复'
+                            }
+                        }
+                    }, {
+                        fixed: 'right',
+                        title: '操作',
+                        toolbar: '#barDemo'
+                    }]
+                ]
+                crm.tb('#test', list, col, function (table, form) {
+                    table.on('tool(test)', function (obj) {
+                        if (obj.event === 'edit') {
+                            keywordShow(obj.data.id, obj.data.reply_type)
+                        }
+                        if (obj.event === 'del') {
+                            console.log(211231312)
+                        }
+                    });
+                })
+            });
+    }
+    
+    function setText(i) {
+        $(i).addClass('layui-this');
+        $(i).siblings().removeClass('layui-this');
+        $('#innerMoster').html(
+            `<div class="layui-tab-item layui-show" data-type="auto"><textarea placeholder="请输入内容" value="123" class="layui-textarea" rows="10"></textarea></div>`
+        )
+    }
+
+    // 设置图文
+    function setContext(i) {
+        $(i).addClass('layui-this');
+        $(i).siblings().removeClass('layui-this');
+        $('#innerMoster').html(
+            `
+            <div class="layui-tab-item layui-show layui-tab-brief showTablist" data-type="auto">
+                    <button type="button" class="layui-btn"
+                        onclick="openUpload(this,'single')">单图文素材</button>
+                    <button type="button" class="layui-btn" onclick="openUpload(this,'multi')">多图文素材</button>
+                </div>
+            `
+        )
+    }
+
+    function openUpload(i, j) {
+        $(i).siblings().removeClass('layui-this');
+        $(i).addClass('layui-this');
+        $('.uploadImg').show();
+        $('.attention').hide();
+        let html = '';
+        let html1 = '';
+        let arr1 = [];
+        if (j == 'single') {
+            html += `<div class="layui-tab-item layui-show">
+                        <div style="display: flex; padding-bottom: 70px;">
+                            <div class="phone_box">
+                                <div class="appphone_top">
+                                    <span class="apptop_tittle" data-bind="text:brandName">标题预览</span>
+                                </div>
+                                <div class="appphone_content" style="width: 316px;margin-left: 22px;">
+                                    <div class="SingleGraphic_content" style="background: #ffffff;">
+                                        <div style="padding:20px 10px 10px 10px">
+                                            <div style="border: 1px solid #ccc;">
+                                                <img alt="" class="singleImg" height="147px" width="100%" src="../_public/images/ceremony06.png">
+                                                <div style="padding: 10px;width:100%;">
+                                                    <div
+                                                        style="font-size: 15px;font-weight: bold;text-align: left;text-overflow: ellipsis;overflow: hidden; white-space: nowrap;width: 100%;display: inline-block;">
+                                                        <span class="phoneTitle">标题</span>
+                                                    </div>
+                                                    <div
+                                                        style="text-align: left; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; width: 100%; display: inline-block;">
+                                                        <span style="" class="phoneZy">摘要</span>
+                                                    </div>
+                                                </div>
+                                                <div style="clear:both"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>`;
+        } else {
+            html += `
+                <div class="layui-tab-item layui-show">
+                    <div style="display: flex; padding-bottom: 70px;">
+                        <div class="phone_box">
+                            <div class="appphone_top">
+                                <span class="apptop_tittle" data-bind="text:brandName">标题预览</span>
+                            </div>
+                            <div class="appphone_content" style="width: 316px;margin-left: 22px;">
+                                <div class="SingleGraphic_content" style="background: #ffffff;">
+                                    <div style="padding:20px 10px 10px 10px">
+                                        <div style="border: 1px solid #ccc;">
+                                            <div class="titleNode">
+                                                <img alt="" class="singleImg" height="147px" width="100%" src="../_public/images/ceremony06.png">
+                                                <div class="hostgraph" style="width:100%;position: relative">
+                                                    <b class="nodeShowTitle"><span class="phoneTitle">标题</span></b>
+                                                    <i class="layui-icon addEdit" style="font-size: 30px; color: #919191;position: absolute;bottom: 30px;right:10px;">&#xe642;</i>
+                                                </div>
+                                            </div>
+                                            <div class="childrenNodeList">
+                                                
+                                            </div>
+                                            <div class="addMaterc addNode" style="display: block;">
+                                                <span class="addShowc">+</span>
+                                            </div>
+                                        </div>
+                                        <div style="clear:both"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+        }
+        html += `<div class="panel-body rt-panel" style="min-width: 700px; width: 60%; padding: 0 20px;">
+                            <div class="" style="background-color: #fff; border-radius: 10px">
+                                <div class="edit_box" id="edit_box">
+                                    <form class="" action="">
+                                        <div class="layui-form-item">
+                                            <label class="layui-form-label">标题</label>
+                                            <div class="layui-input-block">
+                                                <input type="text" name="title" lay-verify="title" autocomplete="off"
+                                                    placeholder="" class="layui-input" onblur="setTitle(this,'')">
+                                            </div>
+                                        </div>
+                                        <div class="layui-form-item">
+                                            <label class="layui-form-label">作者</label>
+                                            <div class="layui-input-block">
+                                                <input type="text" name="title" lay-verify="title" autocomplete="off"
+                                                    placeholder="" class="layui-input" onblur="setZz(this,'')">
+                                            </div>
+                                        </div>
+                                        <div class="layui-form-item layui-form-text" style="display: ${j == 'single' ? 'block' : 'none'}">
+                                            <label class="layui-form-label">摘要</label>
+                                            <div class="layui-input-block">
+                                                <textarea placeholder="请输入内容" class="layui-textarea" onblur="setZy(this,'')"></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="layui-form-item">
+                                            <label class="layui-form-label">封面图</label>
+                                            <div class="layui-upload" style="margin-left: 110px;">
+                                                <button type="button" class="layui-btn testS0">上传图片</button>
+                                                <span>建议尺寸：520*416像素</span>
+                                                <div class="layui-upload-list">
+                                                    <img class="layui-upload-img" id="demo1">
+                                                    <p id="demoText"></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <textarea class="layui-textarea" id="LAY_demo1" style="display: none" onblur="setContent(this,'')">
+                                      </textarea>
+                                      <div class="site-demo-button" style="margin-top: 20px;">
+  <button class="layui-btn site-demo-layedit" data-type="content">获取编辑器内容</button>
+  <button class="layui-btn site-demo-layedit" data-type="text">获取编辑器纯文本内容</button>
+  <button class="layui-btn site-demo-layedit" data-type="selection">获取编辑器选中内容</button>
+</div>
+                                    </form>
+                                </div>
+                            </div> 
+                        </div>
+                    </div>
+                </div>`;
+        $('#showPhoneBuild').html(html);
+        // 点击加号
+        $('.addShowc').click(function () {
+            let dataIndex = $('.childrenNode').length;
+            $(this).parent().siblings('.childrenNodeList').append(`
+            <div class="childrenNode" onmouseenter="showEditBtn(this)" onmouseleave="hideEditBtn(this)">
+                                                    <div class="children wclear grid-nav-bar">
+                                                        <div class="grid-nav-bar-item detail-title" style="text-align:left;
+    width: 200px;color:#333"></div>
+                                                        <div class="grid-nav-bar-item"
+                                                            style="width: 48px;">
+                                                            <img width="48" height="48" class="detailImg${dataIndex}" alt=""
+                                                                src="../_public/images/ceremony06.png">
+                                                        </div>
+                                                    </div>
+                                                    <span class="editLay">
+                                                        <span class="editLayinner">
+                                                            <i class="layui-icon addEdit2" data-index="${dataIndex}"
+                                                                style="font-size: 30px; color: #919191;">&#xe642;</i>
+                                                            <i class="layui-icon delete"
+                                                                style="font-size: 30px; color: #919191;">&#xe640;</i>
+                                                        </span>
+                                                    </span>
+                                                </div>`)
+            // 添加的小篇幅删除图标
+            $('.delete').click(function () {
+                $(this).parents('.childrenNode').remove();
+            })
+            // 添加的小篇幅编辑图标
+            $('.addEdit2').click(function () {
+                console.log(parseInt($(this)[0].dataset.index))
+                let editIndex = parseInt($(this)[0].dataset.index) + 1;
+                let title = $(this).parents('.editLay').siblings('.children').children('.detail-title')
+                    .html();
+                layui.use('layedit', function () {
+                    var layedit = layui.layedit,
+                        $ = layui.jquery;
+                    //构建一个默认的编辑器
+                    layedit.build('content' + editIndex);
+                });
+
+                // 编辑每一个小篇幅时的上传图片
+                layui.use('upload', function () {
+                    var $ = layui.jquery,
+                        upload = layui.upload;
+
+                    //普通图片上传
+                    var uploadInst = upload.render({
+                        elem: '.test' + editIndex,
+                        url: 'https://httpbin.org/post' //改成您自己的上传接口
+                            ,
+                        before: function (obj) {
+                            //预读本地文件示例，不支持ie8
+                            obj.preview(function (index, file, result) {
+                                $('.detailImg' + (editIndex - 1)).attr(
+                                    'src',
+                                    result); //图片链接（base64）
+                            });
+                        },
+                        done: function (res) {
+                            //如果上传失败
+                            if (res.code > 0) {
+                                return layer.msg('上传失败');
+                            }
+                            //上传成功
+                        },
+                        error: function () {
+                            //演示失败状态，并实现重传
+                            var demoText = $('#demoText');
+                            demoText.html(
+                                '<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-xs demo-reload">重试</a>'
+                            );
+                            demoText.find('.demo-reload').on('click', function () {
+                                uploadInst.upload();
+                            });
+                        }
+                    });
+                })
+            })
+        })
+        // 点击第一条的编辑
+        $('.addEdit').click(function () {
+            let editIndex = parseInt($(this)[0].dataset.index) + 1;
+            let title = $(this).siblings('.nodeShowTitle').children('.phoneTitle').html();
+
+
+            obj.title = $('.phoneTitle').text();
+            obj.src = $('.singleImg').attr('src');
+            obj.zz = $('.phoneTitle')[0].dataset.zz;
+            console.log(obj.zz)
+            obj.content = $('.phoneTitle')[0].dataset.content;
+            console.log(obj)
+
+            layui.use('layedit', function () {
+                var layedit = layui.layedit,
+                    $ = layui.jquery;
+
+                //构建一个默认的编辑器
+                var index = layedit.build('LAY_demo2');
+
+            });
+            layui.use('upload', function () {
+                var $ = layui.jquery,
+                    upload = layui.upload;
+                //普通图片上传
+                var uploadInst = upload.render({
+                    elem: '.testM0',
+                    url: 'https://httpbin.org/post' //改成您自己的上传接口
+                        ,
+                    before: function (obj) {
+                        //预读本地文件示例，不支持ie8
+                        obj.preview(function (index, file, result) {
+                            $('.singleImg').attr('src',
+                                result); //图片链接（base64）
+                        });
+                    }
+                });
+            })
+        })
+
+
+        layedit(); //调用富文本编辑器
+        // 单图文上传图片
+        layui.use('upload', function () {
+            var $ = layui.jquery,
+                upload = layui.upload;
+
+            //普通图片上传
+            var uploadInst = upload.render({
+                elem: '.testS0',
+                url: 'https://httpbin.org/post', //改成您自己的上传接口
+                before: function (obj) {
+                    //预读本地文件示例，不支持ie8
+                    obj.preview(function (index, file, result) {
+                        $('.singleImg').attr('src',
+                            result); //图片链接（base64）
+                    });
+                }
+            });
+        })
+    }
+
+    function setImg(i, j, z) {
+        $(i).addClass('layui-this');
+        $(i).siblings().removeClass('layui-this');
+        $('#innerMoster').html(
+            `<div class="layui-tab-item layui-show" data-type="auto"><button type="button" id="k_uploadImg" class="layui-btn scImg">上传图片</button>
+                                        <div style="width: 300px;margin-top: 10px;">
+                                            <img alt="" class="scGetImg" height="147px" width="100%" src="../_public/images/ceremony06.png"></div></div>`
+            );
+        FunuploadImg('k_uploadImg');
+    }
+
+    function setProgram(i) {
+        $(i).addClass('layui-this');
+        $(i).siblings().removeClass('layui-this');
+        $('#innerMoster').html(
+            `<div class="layui-tab-item layui-show" data-type="auto">
+                <form class="" action="">
+                                            <div class="layui-form-item">
+                                                <label class="layui-form-label">标题</label>
+                                                <div class="layui-input-block">
+                                                    <input type="text" name="title" required lay-verify="required"
+                                                        placeholder="请输入标题" autocomplete="off" class="layui-input">
+                                                </div>
+                                            </div>
+                                            <div class="layui-form-item">
+                                                <label class="layui-form-label">小程序</label>
+                                                <div class="layui-input-block">
+                                                    <select style="height:38px" name="" lay-verify="required">
+                                                        <option value=""></option>
+                                                        <option value="0">其他小程序</option>
+                                                        <option value="1">纪念日会员中心</option>
+                                                        <option value="2">其他小程序</option>
+                                                    </select>
+                                                    <p>要求选择的小程序在公众号后台已关联</p>
+                                                </div>
+                                            </div>
+                                            <div class="layui-form-item">
+                                                <label class="layui-form-label">appid</label>
+                                                <div class="layui-input-block">
+                                                    <input type="text" name="title" required lay-verify="required"
+                                                        placeholder="请输入appid" autocomplete="off" class="layui-input">
+                                                    <p>请先将小程序与公众号进行绑定</p>
+                                                </div>
+                                            </div>
+                                            <div class="layui-form-item">
+                                                <label class="layui-form-label">小程序路径</label>
+                                                <div class="layui-input-block">
+                                                    <input type="text" name="title" required lay-verify="required"
+                                                        placeholder="请输入小程序路径" autocomplete="off" class="layui-input">
+                                                </div>
+                                            </div>
+                                            <div class="layui-form-item">
+                                                <label class="layui-form-label">图片</label>
+                                                <div class="layui-upload" style="margin-left: 110px;">
+                                                    <button type="button" id="msg_uploadImg" class="layui-btn scImg">上传图片</button>
+                                                    <span>建议尺寸：520*416像素</span>
+                                                    <div style="width: 300px;margin-top: 10px;">
+                                                        <img alt="" class="scGetImg" height="147px" width="100%" src="../_public/images/ceremony06.png">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form></div>`
+        );
+        FunuploadImg('msg_uploadImg');
+    }
+
+   // 关键词编辑，新增
+    function keywordShow(i, j) {
+        $('#outerMoster').html(`
+                            <form class="keywordForm" action="">   
+                                            <div class="layui-form-item rulename">
+                                                <label class="layui-form-label" style="width:auto">规则名称</label>
+                                                <div class="layui-input-block">
+                                                    <input type="text" name="title" required  lay-verify="required" placeholder="请输入标题" autocomplete="off" class="layui-input">
+                                                </div>
+                                            </div>
+                                            <div class="layui-form-item keyword">
+                                                <label class="layui-form-label" style="width:auto">关键词</label>
+                                                <div class="layui-input-block">
+                                                    <a class="layui-btn layui-btn-xs" id="addKeyWords" class="layui-btn layui-btn-normal">添加</a>
+                                                    <ul style="margin-top: 10px;" id="keyWordArr">
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="layui-form-item replyContent">
+                                                <label class="layui-form-label" style="width:auto">回复内容</label>
+                                                <div class="layui-input-block">
+                                                    <ul class="layui-tab-title">
+                                                        <li class="layui-this" onclick="setText(this)">文本</li>
+                                                        <!--<li onclick="setContext(this)">图文</li>-->
+                                                        <li onclick="setImg(this)">图片</li>
+                                                        <li onclick="setProgram(this)">小程序</li>
+                                                    </ul>
+                                                    <div class="layui-tab-content" id="innerMoster" style="padding: 6px 0;">
+                                                       
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form>
+                                        <div
+                                            style="background: #ffffff; bottom: 0; width: 100%; right: 0; left: 0; position: fixed;text-align:center;padding: 10px 0;">
+                                            <button onclick="backKeyword();"
+                                                style="background-color: #fff;padding: 12px 12px;border:1px solid #ccc;margin-left: 10px;width:120px;border-radius: 2px">
+                                                返回
+                                            </button>
+                                            <button onclick="menu_edit();"
+                                                style="color: #fff;background-color: #8bc34a;padding: 12px 12px;border:none;width:120px;border-radius: 2px">
+                                                保存
+                                            </button>
+                                        </div>
+                            `)
+        if (i && j) {
+            // 编辑
+            let p = {
+                id: i,
+                reply_type: j
+            }
+            $.get(crm.api_local + "/Weixin/getReplyMsg", p, function (data) {
+                $('.rulename input').val(data.rule_name);
+                var arr = [];
+                arr = data.keywords;
+                arr.map(item => {
+                    $('#keyWordArr').append(
+                        `<li><span>${item}</span><span class="close" onclick="removeKeywords(this)" style="line-height: 20px" title="删除">×</span></li>`
+                    )
+                })
+                var msg_type = data.msg_type;
+                $('.replyContent .layui-tab-title > li').removeClass('layui-this');
+                if (msg_type == 'text') {
+                    $('.replyContent .layui-tab-title > li:first').addClass('layui-this');
+                    $('#innerMoster').html(`<div class="layui-tab-item layui-show" data-type="auto">
+                                                            <textarea placeholder="请输入内容"  class="layui-textarea" rows="10"></textarea>
+                                                        </div>`);
+                    $('#innerMoster textarea').val(data.transmit_content)
+                } else if (msg_type == 'image') {
+                    $('.replyContent .layui-tab-title > li:nth-child(2)').addClass('layui-this');
+                    $('#innerMoster').html(`
+                    <div class="layui-tab-item layui-show" data-type="auto">
+                        <button type="button" class="layui-btn" id="k_uploadImg${data.id}">上传图片</button>
+                        <div style="width: 300px;margin-top: 10px;">
+                            <img alt="" class="scGetImg" height="147px" width="100%" src="../_public/images/ceremony06.png">
+                        </div>
+                    </div>`);
+                    $('#innerMoster .scGetImg').attr('src', data.transmit_content)
+                    FunuploadImg('k_uploadImg' + data.id);
+                } else if (msg_type == 'mp') {
+                    $('.replyContent .layui-tab-title > li:nth-child(3)').addClass('layui-this');
+                    $('#innerMoster').html(
+                        `<div class="layui-tab-item layui-show" data-type="auto"><form class="" action="">
+                                            <div class="layui-form-item">
+                                                <label class="layui-form-label">标题</label>
+                                                <div class="layui-input-block">
+                                                    <input type="text" name="title" required lay-verify="required"
+                                                        placeholder="请输入标题" autocomplete="off" class="layui-input">
+                                                </div>
+                                            </div>
+                                            <div class="layui-form-item">
+                                                <label class="layui-form-label">小程序</label>
+                                                <div class="layui-input-block">
+                                                    <select style="height:38px" name="" lay-verify="required">
+                                                        <option value=""></option>
+                                                        <option value="0">其他小程序</option>
+                                                        <option value="1">纪念日会员中心</option>
+                                                        <option value="2">其他小程序</option>
+                                                    </select>
+                                                    <p>要求选择的小程序在公众号后台已关联</p>
+                                                </div>
+                                            </div>
+                                            <div class="layui-form-item">
+                                                <label class="layui-form-label">appid</label>
+                                                <div class="layui-input-block">
+                                                    <input type="text" name="title" required lay-verify="required"
+                                                        placeholder="请输入appid" autocomplete="off" class="layui-input">
+                                                    <p>请先将小程序与公众号进行绑定</p>
+                                                </div>
+                                            </div>
+                                            <div class="layui-form-item">
+                                                <label class="layui-form-label">小程序路径</label>
+                                                <div class="layui-input-block">
+                                                    <input type="text" name="title" required lay-verify="required"
+                                                        placeholder="请输入小程序路径" autocomplete="off" class="layui-input">
+                                                </div>
+                                            </div>
+                                            <div class="layui-form-item">
+                                                <label class="layui-form-label">图片</label>
+                                                <div class="layui-upload" style="margin-left: 110px;">
+                                                    <button type="button" class="layui-btn scImg">上传图片</button>
+                                                    <span>建议尺寸：520*416像素</span>
+                                                    <div class="layui-upload-list">
+                                                        <img class="layui-upload-img" "../_public/images/ceremony06.png" class="scGetImg">
+                                                        <p id="demoText"></p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form></div>`
+                    )
+                }
+            })
+        } else {
+            $('#keyWordArr').empty();
+            $('.replyContent .layui-tab-title > li:first').addClass('layui-this');
+            $('#innerMoster').html(`<div class="layui-tab-item layui-show" data-type="auto">
+                                                            <textarea placeholder="请输入内容" value="123" class="layui-textarea" rows="10"></textarea>
+                                                        </div>`);
+        }
+        // 添加关键词
+        $('#addKeyWords').click(function () {
+            layer.open({
+                type: 1,
+                title: '添加关键词',
+                content: '<div class="layui-form-item layui-form-text" style="padding: 5px 10px;"><div class=""><textarea id="keywordModal" placeholder="请输入内容" rows="5" cols="100" class="layui-textarea"></textarea> </div></div>',
+                btn: ['确定'],
+                btnAlign: 'c', //按钮居中
+                shade: 0.3, //不显示遮罩
+                yes: function () {
+                    $('#keyWordArr').append(
+                        `<li><span>${$('#keywordModal').val()}</span><span class="close" onclick="removeKeywords(this)" style="line-height: 20px" title="删除">×</span></li>`
+                    )
+                    layer.closeAll();
+                }
+            });
+            // xadmin.open('编辑用户', crm.app_local + `/User/groupUser.html?id=` + data.id)
+        })
+
+    }
+
+
+    function FunuploadImg(i) {
+        layui.use('upload', function () {
+            var $ = layui.jquery,
+                upload = layui.upload;
+            //普通图片上传
+            var uploadInst = upload.render({
+                elem: '#' + i,
+                url: 'https://httpbin.org/post' //改成您自己的上传接口
+                    ,
+                before: function (obj) {
+                    //预读本地文件示例，不支持ie8
+                    obj.preview(function (index, file, result) {
+                        $('.scGetImg').attr('src',
+                            result); //图片链接（base64）
+                    });
+                }
+            });
+        })
+    }
+
+    function removeKeywords(i) {
+        $(i).parent().remove();
+    }
+
+    function backKeyword() {
+        $('.keywordTable').show();
+        tab3();
+    }
+
+    function menu_back() {
+        $('.rt-panel').html('');
+        $('#showPhoneBuild').html('')
+        $('.uploadImg').hide();
+        $('.attention').show();
+    }
+
+    function setZz(i, j) {
+        let val = $(i).val();
+        if (j == 0) {
+            if (val) {
+                $('.phoneTitle').attr('data-zz', $(i).val());
+            } else {
+                $('.phoneTitle').attr('data-zz', '');
+            }
+        } else {
+            $($('.detail-title')[j - 1]).text($(i).val());
+        }
+    }
+
+    function setTitle(i, j) {
+        let val = $(i).val();
+        if (j == 0) {
+            if (val) {
+                $('.phoneTitle').text($(i).val());
+            } else {
+                $('.phoneTitle').text('标题');
+            }
+        } else {
+            $($('.detail-title')[j - 1]).text($(i).val());
+        }
+
+    }
+
+    function setZy(i, j) {
+        if (j) {
+            let val = $(i).val();
+            if (val) {
+                $('.phoneZy')[j].text($(i).val());
+            } else {
+                $('.phoneZy')[j].text('摘要');
+            }
+        }
+
+    }
+
+    function setContent(i, j) {
+        let val = $(i).val();
+        console.log(val)
+        if (j == 0) {
+            if (val) {
+                $('.phoneTitle').attr('data-content', $(i).val());
+            } else {
+                $('.phoneTitle').attr('data-content', '');
+            }
+        }
+    }
+
+    function showEditBtn(i) {
+        $(i).find('.editLay').show();
+        $(i).find('.editLay')
+    }
+
+    function hideEditBtn(i) {
+        $(i).find('.editLay').hide()
+    }
+    // 富文本编辑器
+    function layedit() {
+        layui.use('layedit', function () {
+            var layedit = layui.layedit,
+                $ = layui.jquery;
+
+            //构建一个默认的编辑器
+            layedit.build('LAY_demo1');
+            layedit.build('LAY_demo2')
+        });
+
+    }
+</script>
+
+</html>

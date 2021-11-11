@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>数据字典</title>
+	<script src="../_public/head.js"></script>
+</head>
+
+<body>
+	<div class="x-body">
+		<div class="table-demo">
+			<table class="layui-table layui-col-space10" id="dict" lay-filter="dict"></table>
+
+			<script type="text/html" id="barDemo">
+				<a class="layui-btn layui-btn-sm" lay-event="submit">提交</a>
+			</script>
+		</div>
+	</div>
+
+	<!-- 弹框 -->
+	<div id="dict-open" style="display: none;"></div>
+	<!-- 弹框结束 -->
+	
+	<script src="../_public/refresh.js"></script>
+	<script type="text/javascript">
+		var list = [];
+		var _params = crm.getParam({table_name: ''});
+		console.log(_params.table_name)
+		
+		//用于记录弹框正在修改哪一行
+		var done_columns = '';
+
+		showColumns();
+
+		function showColumns(){
+			crm.post(crm.api_local + "/dict/columns", {table_name: _params.table_name}, function(data){
+				console.log(data)
+				list = data;
+				var cols = [[
+					{ field: 'seq', title: '排序', /*sort: true,*/ width: 70, 
+						templet: function(d){
+							return `
+								<input class="layui-input" type="text" name="" value="` + d.seq + `" oninput="editInput(event, this, '` + d.column_name + `', 'seq');">`;
+						}, 
+					},
+					{ field: 'id', title: 'ID', /*sort: true,*/ width: 70, },
+					{ field: 'column_name', title: '字段名', /*sort: true,*/ },
+					{ field: 'comments', title: '数据库注释', },
+					{ field: 's_data_type', title: '字段类型', },
+					{ field: 'title', title: '字典注释', /*edit: 'text',*/ 
+						templet: function(d){
+							return `<input class="layui-input" type="text" name="" value="` + d.title + `" oninput="editInput(event, this, '` + d.column_name + `', 'title');">`;
+						}, 
+					},
+					{ field: 'notes', title: '备注', /*edit: 'text',*/ 
+						templet: function(d){
+							return `
+								<input class="layui-input" type="text" name="" value="` + d.notes + `" oninput="editInput(event, this, '` + d.column_name + `', 'notes');">`;
+						}, 
+					},
+					{ field: 'type', title: '类型', 
+						templet: function(d){
+							var html = '';
+							var sel = [
+								{ text: '-- 无 --', value: ''}, 
+								{ text: '文本', value: 'text'}, 
+								{ text: '输入框', value: 'input'}, 
+								{ text: '下拉框', value: 'select'}, 
+								{ text: '勾选框', value: 'radio'}, 
+								{ text: '多选框', value: 'checkbox'}, 
+								{ text: '按钮', value: 'button'}, 
+								{ text: '单图上传', value: 'singleUpload'}, 
+								{ text: '多图上传', value: 'multiUpload'}, 
+							];
+							html += `
+								<select class="layui-input" lay-filter="editStateS" data-name="` + d.column_name + `">`;
+							$.each(sel, function(i, val){
+								var _selected = '';
+								if(d.type == val.value){
+									_selected = ' selected="selected"';
+								}
+								html += `
+									<option value="` + val.value + `" ` + _selected + `>` + val.text + `</option>`;
+							})
+							html += `
+								</select>`;
+							return html;
+						}, 
+					},
+					{ field: 'type_value', title: '类型值', /*edit: 'text',*/ 
+						templet: function(d){
+							return `
+								<input class="layui-input" type="text" name="" value="` + encodeURI(d.type_value) + `" onclick="open_type_value('` + d.column_name + `');" readonly="readonly">`;
+						}, 
+					},
+					{ field: 'in_table', title: '列表中显示', width: 100, 
+						templet: function(d){
+							var checked = (d.in_table == 'Y' ? 'checked' : '');
+							return `
+								<input type="checkbox" name="" value="` + d.column_name + `" lay-skin="switch" lay-filter="switch" lay-text="是|否" data-name="in_table" ` + checked + `>`;
+						}, 
+					},
+					{ field: 'isactive', title: '可用', width: 80, 
+						templet: function(d){
+							var checked = (d.isactive == 'Y' ? 'checked' : '');
+							return `
+								<input type="checkbox" name="" value="` + d.column_name + `" lay-skin="switch" lay-filter="switch" data-name="isactive" lay-text="是|否" ` + checked + `>`;
+						}, 
+					},
+					{ title: '操作', toolbar: '#barDemo', width: 80, }
+				]]
+
+				crm._table('#dict', { list, cols }, function(table, form){
+					// 监听单元格
+					// table.on('edit(dict)', function(obj){
+					// 	console.log(obj)
+					// });
+					// 开关
+					form.on('switch(switch)', function(obj){
+						var key = obj.elem.dataset.name;
+						var _switch = obj.elem.checked ? 'Y' : 'N';
+						for(var i = 0; i < list.length; i++){
+							if(list[i].column_name == obj.value){
+								list[i][key] = _switch;
+							}
+						}
+						console.log(data)
+					});
+					// 监听下拉框
+					form.on('select(editStateS)', function (obj) {
+						var column_name = $(obj.elem).attr("data-name"); 
+						for (i = 0; i < list.length; i++) {
+							if (list[i].column_name == column_name) {
+								list[i].type = obj.value;
+							}
+						}
+						obj.othis.parents('tr').find('.layui-unselect').addClass('font-red');
+						console.log(list);
+					})
+
+					table.on('tool(dict)', function(obj){
+						if(obj.event === 'submit'){
+
+							console.log(obj)
+							// obj.event = '';
+							// console.log(obj.data)
+							var _parm = obj.data;
+							_parm.table_name = _params.table_name;
+							if(!_parm.id){
+								_parm.id = 'new'
+							}
+							crm.post(crm.api_local + "/dict/editColumns", _parm, function(data){
+								console.log(data)
+								obj.tr.find('.font-red').removeClass('font-red');
+								showColumns();
+							})
+						}
+					});
+				});				
+			});
+		}
+
+		// 编辑
+		function editInput(e, obj, id, type){
+			$(obj).addClass('font-red');
+			for(var i = 0; i < list.length; i++){
+				if(list[i].column_name == id){
+					list[i][type] = e.target.value;
+				}
+			}
+			console.log(list)
+		}
+
+		//打开弹窗
+		function open_type_value(column_name){
+			done_columns = column_name;
+			var _type = '';
+			var _type_value = '';
+
+			for (i = 0; i < list.length; i++) {
+				if (list[i].column_name == column_name) {
+					_type = list[i].type;
+					if(list[i].type_value){
+						_type_value = JSON.parse(list[i].type_value);
+					}else{
+						_type_value = new Object();
+					}
+				}
+			}
+
+			var html = '';
+			html += `
+		<div class="dict-open-form layui-form">`
+			if(_type == 'text'){
+
+			}else if(_type == 'input' || _type == 'multiUpload'){
+				html += `
+			<div class="layui-form-item">
+				<label class="layui-form-label">默认值</label>
+				<div class="layui-input-block">
+					<input type="text" name="" class="layui-input">
+				</div>
+			</div>
+			<div class="layui-form-item">
+				<div class="layui-input-block">
+					<button class="layui-btn layui-btn-new" onclick="close_open(this);">确认</button>
+				</div>
+			</div>`;
+			}else if(_type == 'select' || _type == 'checkbox'){
+				var _group_nums = 0;
+				var _group_nums_t = '';
+				$.each(_type_value, function(key, value){
+					if( key.indexOf('group_') >= 0 ){
+						_group_nums_t = key.split('group_')[1];
+						_group_nums = _group_nums_t > _group_nums ? _group_nums_t : _group_nums;
+
+						html += `
+			<div class="layui-form-item">
+				<label class="layui-form-label">选项-` + _group_nums_t + `</label>
+				<div class="layui-input-inline">
+					<input type="text" class="layui-input" name="select_option_title" data-group="` + _group_nums_t + `" placeholder="输入选项-` + _group_nums_t + `的展示值" value="` + value.select_option_title + `">
+				</div>
+				<div class="layui-input-inline">
+					<input type="text" class="layui-input" name="select_option_value" data-group="` + _group_nums_t + `" placeholder="输入选中选项-` + _group_nums_t + `保存的值" value="` + value.select_option_value + `">
+				</div>
+			</div>`;
+					}
+				});
+				if( _group_nums <= 0 ){
+					_group_nums = 1;
+					html += `
+			<div class="layui-form-item">
+				<label class="layui-form-label">选项-1</label>
+				<div class="layui-input-inline">
+					<input type="text" class="layui-input" name="select_option_title" data-group="1" placeholder="输入选项-1的展示值">
+				</div>
+				<div class="layui-input-inline">
+					<input type="text" class="layui-input" name="select_option_value" data-group="1" placeholder="输入选中选项-1保存的值">
+				</div>
+			</div>`;
+				}
+
+				_group_nums ++;
+				html += `
+			<div class="layui-form-item mt6" name="add_ctl">
+				<div class="layui-input-block">
+					<button class="layui-btn layui-btn-primary" onclick="add_select_option(this, ` + _group_nums + `);">添加新选项卡</button>
+					<button class="layui-btn layui-btn-new" onclick="close_open(this);">确认</button>
+				</div>
+			</div>`;
+			}else if(_type == 'radio'){
+				html += `
+			<div class="layui-form-item">
+				<label class="layui-form-label">选项-1</label>
+				<div class="layui-input-inline">
+					<input type="text" class="layui-input" name="" placeholder="输入选项-1的展示值">
+				</div>
+				<div class="layui-input-inline">
+					<input type="text" class="layui-input" name="" placeholder="输入选中选项-1保存的值">
+				</div>
+			</div>
+			<div class="layui-form-item">
+				<label class="layui-form-label">选项-2</label>
+				<div class="layui-input-inline">
+					<input type="text" class="layui-input" name="" placeholder="输入选项-2的展示值">
+				</div>
+				<div class="layui-input-inline">
+					<input type="text" class="layui-input" name="" placeholder="输入选中选项-2保存的值">
+				</div>
+			</div>
+			<div class="layui-form-item mt6">
+				<div class="layui-input-block">
+					<button class="layui-btn layui-btn-new" onclick="close_open(this);">确认</button>
+				</div>
+			</div>`;
+			}else if(_type == 'button'){
+				html += `
+			<div class="layui-form-item">
+				<label class="layui-form-label">按钮名称</label>
+				<div class="layui-input-block">
+					<input type="text" name="button_name" placeholder="" class="layui-input" value="` + (_type_value.button_name || '') + `">
+				</div>
+			</div>
+			<div class="layui-form-item">
+				<label class="layui-form-label">跳转链接</label>
+				<div class="layui-input-block">
+					<input type="text" name="button_href" placeholder="" class="layui-input" value="` + (_type_value.button_href || '') + `">
+				</div>
+			</div>
+			<div class="layui-form-item">
+				<label class="layui-form-label">触发事件</label>
+				<div class="layui-input-block">
+					<input type="text" name="button_click" placeholder="" class="layui-input" value="` + (_type_value.button_click || '') + `">
+				</div>
+			</div>`;
+
+				var _group_nums = 0;
+				var _group_nums_t = '';
+				var _table_type = '';
+				$.each(_type_value, function(key, value){
+					if( key.indexOf('group_') >= 0 ){
+						_group_nums_t = key.split('group_')[1];
+						_group_nums = _group_nums_t > _group_nums ? _group_nums_t : _group_nums;
+
+						_table_type = ''; 
+						if( value.button_param_table ){
+							if( value.button_param_table.toUpperCase() == _params.table_name.toUpperCase() ){
+								_table_type = 'Y';
+							}else{
+								_table_type = 'N';
+							}
+						}
+
+						html += `
+			<div name="change_ctl">
+				<div class="layui-form-item">
+					<label class="layui-form-label">参数-` + _group_nums_t + `的key</label>
+					<div class="layui-input-inline">
+						<input type="text" class="layui-input" name="button_param_key" data-group="` + _group_nums_t + `" placeholder="输入参数-` + _group_nums_t + `的key" value="` + value.button_param_key + `">
+					</div>
+					<div class="layui-input-inline">
+						<select lay-filter="_params" class="layui-input">
+							<option value="1"` + (_table_type == 'Y' ? ' selected="selected"' : '') + `>本表字段</option>
+							<option value="2"` + (_table_type == 'N' ? ' selected="selected"' : '') + `>其他字段</option>
+							<option value="3"` + (_table_type == '' ? ' selected="selected"' : '') + `>固定值</option>
+						</select>
+					</div>
+				</div>
+				<div class="layui-form-item">
+					<label class="layui-form-label"></label>
+					<div class="layui-input-inline">
+						<input type="text" class="layui-input" name="button_param_table" data-group="` + _group_nums_t + `" placeholder="输入参数-` + _group_nums_t + `的表名" value="` + (value.button_param_table || '') + `">
+					</div>
+					<div class="layui-input-inline">
+						<input type="text" class="layui-input" name="button_param_column" data-group="` + _group_nums_t + `" placeholder="输入参数-` + _group_nums_t + `的字段名" value="` + (value.button_param_column || '') + `">
+					</div>
+					<div class="layui-input-inline">
+						<input type="text" class="layui-input" name="button_param_value" data-group="` + _group_nums_t + `" placeholder="输入参数-` + _group_nums_t + `的固定值" value="` + (value.button_param_value || '') + `">
+					</div>
+				</div>
+			</div>`;
+					}
+				});
+				if( _group_nums <= 0 ){
+					_group_nums = 1;
+					html += `
+			<div name="change_ctl">
+				<div class="layui-form-item">
+					<label class="layui-form-label">参数-1</label>
+					<div class="layui-input-inline">
+						<input type="text" class="layui-input" name="button_param_key" data-group="1" placeholder="输入参数-1的key" value="">
+					</div>
+					<div class="layui-input-inline">
+						<select lay-filter="_params" class="layui-input">
+							<option value="1">本表字段</option>
+							<option value="2">其他字段</option>
+							<option value="3">固定值</option>
+						</select>
+					</div>
+				</div>
+				<div class="layui-form-item">
+					<label class="layui-form-label"></label>
+					<div class="layui-input-inline">
+						<input type="text" class="layui-input" name="button_param_table" data-group="1" placeholder="输入参数-1的表名">
+					</div>
+					<div class="layui-input-inline">
+						<input type="text" class="layui-input" name="button_param_column" data-group="1" placeholder="输入参数-1的字段名">
+					</div>
+					<div class="layui-input-inline">
+						<input type="text" class="layui-input" name="button_param_value" data-group="1" placeholder="输入参数-1的固定值">
+					</div>
+				</div>
+			</div>`;
+				}
+
+				_group_nums ++;
+				html += `
+			<div class="layui-form-item mt6"  name="add_ctl">
+				<div class="layui-input-block">
+					<button class="layui-btn layui-btn-primary" onclick="add_button_param(this, ` + _group_nums + `);">添加新的参数</button>
+					<button class="layui-btn layui-btn-new" onclick="close_open(this);">确认</button>
+				</div>
+			</div>`;
+			}
+			html += `
+		</div>
+			`;
+			layui.use(['element', 'form'], function(){
+				var $ = layui.$,
+					element = layui.element,
+					form = layui.form;
+
+				$('#dict-open').html(html);
+
+				form.render();
+
+				layer.open({
+					type: 1,
+					title: '请输入',
+					content: $('#dict-open'),
+					area: [($(window).width() * 0.96) + 'px', ($(window).height() - 20) + 'px'],
+					shade: 0.5,
+				});
+
+				form.on('select(_params)', function(data){
+					var _parent = data.othis.parents("div[name='change_ctl']");
+					if(data.value == 1){
+						_parent.find("input[name='button_param_table']").val(_params.table_name).css({display:''}).attr('readonly','readonly');
+						_parent.find("input[name='button_param_column']").val('').attr({display:''});
+						_parent.find("input[name='button_param_value']").val('').css({display:'none'});
+					} else if(data.value == 2){
+						_parent.find("input[name='button_param_table']").val('').css({display:''});
+						_parent.find("input[name='button_param_column']").val('').css({display:''});
+						_parent.find("input[name='button_param_value']").val('').css({display:'none'});
+					} else if(data.value == 3){
+						_parent.find("input[name='button_param_table']").val('').css({display:'none'});
+						_parent.find("input[name='button_param_column']").val('').css({display:'none'});
+						_parent.find("input[name='button_param_value']").val('').css({display:''});
+					}
+				})
+			});
+		}
+
+		//新增select选项卡
+		function add_select_option(obj, nums){
+			var _parent = $(obj).parents("div[name='add_ctl']");
+			var _html = `
+			<div class="layui-form-item">
+				<label class="layui-form-label">选项-` + nums + `</label>
+				<div class="layui-input-inline">
+					<input type="text" class="layui-input" name="select_option_title" data-group="` + nums + `" placeholder="输入选项-` + nums + `的展示值">
+				</div>
+				<div class="layui-input-inline">
+					<input type="text" class="layui-input" name="select_option_value" data-group="` + nums + `" placeholder="输入选中选项-` + nums + `保存的值">
+				</div>
+			</div>`;
+			_parent.before(_html);
+
+			console.log(nums)
+			nums ++;
+			var _html = `
+			<div class="layui-input-block">
+				<button class="layui-btn layui-btn-primary" onclick="add_select_option(this, ` + nums + `);">添加新选项卡</button>
+				<button class="layui-btn layui-btn-new" onclick="close_open(this);">确认</button>
+			</div>`;
+			_parent.html(_html);
+		}
+
+		//新增按钮参数
+		function add_button_param(obj, nums){
+			var _parent = $(obj).parents("div[name='add_ctl']");
+
+			var _html = `
+			<div name="change_ctl">
+				<div class="layui-form-item">
+					<label class="layui-form-label">参数-` + nums + `的key</label>
+					<div class="layui-input-inline">
+						<input type="text" class="layui-input" name="button_param_key" data-group="` + nums + `" placeholder="输入参数-` + nums + `的key" value="">
+					</div>
+					<div class="layui-input-inline">
+						<select lay-filter="_params" class="layui-input">
+							<option value="1">本表字段</option>
+							<option value="2">其他字段</option>
+							<option value="3">固定值</option>
+						</select>
+					</div>
+				</div>
+				<div class="layui-form-item">
+					<label class="layui-form-label"></label>
+					<div class="layui-input-inline">
+						<input type="text" class="layui-input" name="button_param_table" data-group="` + nums + `" placeholder="输入参数-` + nums + `的表名">
+					</div>
+					<div class="layui-input-inline">
+						<input type="text" class="layui-input" name="button_param_column" data-group="` + nums + `" placeholder="输入参数-` + nums + `的字段名">
+					</div>
+					<div class="layui-input-inline">
+						<input type="text" class="layui-input" name="button_param_value" data-group="` + nums + `" placeholder="输入参数-` + nums + `的固定值">
+					</div>
+				</div>
+			</div>`;
+			_parent.before(_html);
+			
+			layui.use(['element', 'form'], function(){
+				var $ = layui.$,
+					element = layui.element,
+					form = layui.form;
+
+				form.render();
+			})
+
+			nums ++;
+			var _html = `
+			<div class="layui-input-block">
+				<button class="layui-btn layui-btn-primary" onclick="add_button_param(this, ` + nums + `);">添加新选项卡</button>
+				<button class="layui-btn layui-btn-new" onclick="close_open(this);">确认</button>
+			</div>`;
+			_parent.html(_html);
+		}
+
+		//修改按钮参数类型
+		function button_param_type(obj){
+			var _parent = $(obj).parents("div[name='change_ctl']");
+			if(obj.value == 1){
+				_parent.find("input[name='button_param_table']").val(_params.table_name).css({display:''}).attr('readonly','readonly');
+				_parent.find("input[name='button_param_column']").val('').attr({display:''});
+				_parent.find("input[name='button_param_value']").val('').css({display:'none'});
+			}else if(obj.value == 2){
+				_parent.find("input[name='button_param_table']").val('').css({display:''});
+				_parent.find("input[name='button_param_column']").val('').css({display:''});
+				_parent.find("input[name='button_param_value']").val('').css({display:'none'});
+			}else if(obj.value == 3){
+				_parent.find("input[name='button_param_table']").val('').css({display:'none'});
+				_parent.find("input[name='button_param_column']").val('').css({display:'none'});
+				_parent.find("input[name='button_param_value']").val('').css({display:''});
+			}
+		}
+
+		//保存type_value
+		function close_open(obj){
+			var input_list = $(obj).parents(".dict-open-form").find('input');
+			console.log(done_columns);
+			console.log(input_list);
+			for (i = 0; i < list.length; i++) {
+				if (list[i].column_name == done_columns) {
+					var _type_value = new Object();
+					$.each(input_list, function(key, value){
+						var _group = $(this).data('group');
+						var _name = $(this).attr('name');
+						console.log(typeof _name);
+						if( typeof _name != 'undefined' ){
+							if(_group){
+								_group = 'group_' + _group;
+								if( !_type_value[_group] ){
+									_type_value[_group] = new Object();
+								}
+								_type_value[_group][_name] = $(this).val();
+							}else{
+								_type_value[_name] = $(this).val();
+							}
+						}
+					});
+					// console.log(_type_value);
+					// var _type_values = new Array();
+					// keys = 0;
+					// $.each(_type_value, function(key, value){
+					// 	_type_values[keys] = value;
+					// 	keys ++;
+					// });
+					// list[i]['type_value'] = JSON.stringify(_type_values);
+					list[i]['type_value'] = JSON.stringify(_type_value);
+				}
+			}
+			console.log(list);
+			layer.closeAll();
+		}
+	</script>
+</body>
+
+</html>

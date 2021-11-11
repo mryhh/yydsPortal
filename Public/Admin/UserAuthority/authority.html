@@ -1,0 +1,145 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title>用户组 - 操作权限</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<div class="obj-array">
+			<table id="obj_arr" class="layui-table" lay-even></table>
+		</div>
+	</div>
+</body>
+
+<script src="../_public/reback.js"></script>
+<script src="../_public/refresh.js"></script>
+<script type="text/javascript">
+	var this_param = crm.getParam({admin_user_group_id: ''});
+
+	console.log(this_param);
+
+	authorityInfo();
+	
+	//初始化页面
+	function authorityInfo(){
+		crm.post(
+			crm.api_local + '/UserAuthority/authority', 
+			{
+				admin_user_group_id: this_param.admin_user_group_id
+			}, 
+			function(res){
+				var html = '';
+
+				$.each(res.obj, function(key, value){
+
+					var _tr = '';
+					//行开始
+					$.each(value, function(keyt, valuet){
+						if( _tr == ''){
+							_tr += `
+			<tr>
+				<td tr_row_id="` + key + `" class="select_row unselected" onclick="select_row(this);">` + (valuet._same_title ? valuet._same_title : '未知') + `</td>`;
+						}
+
+						var _td = '';
+						if(valuet.id == ''){
+							_td = `<input type="checkbox" id="" id_row="` + key + `" id_col="` + keyt + `" id_all="` + key + '_' + keyt + `" admin_operate_id="` + valuet.admin_operate_id + `">`;
+						}else{
+							_td = `<input type="checkbox" id="` + valuet.id + `" id_row="` + key + `" id_col="` + keyt + `" id_all="` + key + '_' + keyt + `" admin_operate_id="` + valuet.admin_operate_id + `" checked="checked">`
+						}
+						_tr += `
+				<td>` + _td + ' ' + valuet.title + ' ' + (valuet.data_authority == 'Y' ? `<button class="layui-btn-primary unselected" onclick="data_authority(` + valuet.admin_operate_id + `, '` + valuet.title + `');">数</button>` : '') + `</td>`;
+					});
+
+					html += _tr + `
+			</tr>`;
+					//行结束
+				});
+
+				$("#obj_arr").html(html);
+				$(".obj-array").append(`<button class="layui-btn" onclick="save_authority();">点击保存权限设置</button>`);
+
+				//加载时将选中的对应的行和列标识加状态
+				var checked_input = $("#obj_arr").find('input[checked="checked"]');
+				// console.log(checked_input);
+				$.each(checked_input, function(key, val){
+					var _row_id = $(this).attr('id_row');
+					// var _col_id = $(this).attr('id_col');
+
+					var _select_row = $("#obj_arr").find('td[tr_row_id="' + _row_id + '"]');
+					// var _select_col = $("#obj_arr").find('td[tr_col_id="' + _col_id + '"]');
+
+					if( _select_row.hasClass('unselected') ){
+						_select_row.removeClass('unselected').addClass('selected');
+					}
+					// if( _select_col.hasClass('unselected') ){
+					// 	_select_col.removeClass('unselected').addClass('selected');
+					// }
+				});
+			}
+		);
+	}
+
+	//点击行表头
+	function select_row(obj){
+		// var tr_col_id = $(obj).attr('tr_col_id');
+		if( $(obj).hasClass('unselected') ){
+			$(obj).removeClass('unselected').addClass('selected');
+			// var checked = true;
+			$("#obj_arr").find('td [id_row="' + $(obj).attr('tr_row_id') + '"]').attr({checked: 'checked'}).prop({checked: 'checked'});
+		}else{
+			$(obj).removeClass('selected').addClass('unselected');
+			// var checked = false;
+			$("#obj_arr").find('td [id_row="' + $(obj).attr('tr_row_id') + '"]').removeAttr('checked').prop({checked: ''});
+		}
+
+		// var selected_col = $("#obj_arr").find('td.select_col.selected');
+		// $.each(selected_col, function(key, val){
+		// 	if(checked){
+		// 		$("#obj_arr").find('td [id_all="' + $(obj).attr('tr_row_id') + '_' + $(this).attr('tr_col_id') + '"]').attr({checked: 'checked'}).prop({checked: 'checked'});
+		// 	}else{
+		// 		$("#obj_arr").find('td [id_all="' + $(obj).attr('tr_row_id') + '_' + $(this).attr('tr_col_id') + '"]').removeAttr('checked');
+		// 	}
+		// });
+	}
+
+	function save_authority(){
+		var checked_input = $("#obj_arr").find('input');
+
+		var list = new Array();
+		list_key = 0;
+		$.each(checked_input, function(key, val){
+			if( $(this).prop('checked') || val.checked ){
+				list[list_key] = new Object();
+				// list[list_key]['row'] = $(this).attr('id_row');
+				// list[list_key]['col'] = $(this).attr('id_col');
+				list[list_key]['admin_operate_id'] = $(this).attr('admin_operate_id');
+				list[list_key]['id'] = $(this).attr('id');
+				list_key ++;
+			}
+		});
+
+		if( !confirm('共有' + list_key + '个权限，确认提交！') ){
+			return false;
+		}
+
+		console.log(list);
+
+		crm.post(
+			crm.api_local + '/UserAuthority/editAuthority',
+			{
+				admin_user_group_id: this_param.admin_user_group_id,
+				list: list
+			},
+			function(res){
+				window.location.replace(location.href);
+			}
+		);
+	}
+
+	function data_authority(id, title){
+		xadmin.open(title + ' - 数据权限', crm.app_local + '/UserAuthority/authorityData.html?admin_operate_id=' + id + '&admin_user_group_id=' + this_param.admin_user_group_id);
+	}
+</script>
+</html>

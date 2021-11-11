@@ -1,0 +1,39 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title>生成cdk</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<button onclick="do_cdk();">确定开始</button>
+	</div>
+</body>
+
+<script src="../_public/refresh.js"></script>
+<script type="text/javascript">
+	var this_param = crm.getParam({promo_type: '', id: ''});
+	console.log(this_param);
+
+	function do_cdk(){
+		$(".x-body").html('查询中..');
+
+		crm.post(crm.api_local + "/Customize/cdk", {promo_type: this_param.promo_type, id: this_param.id}, function(data){
+			console.log(data);
+			alert('生成成功');
+			var html = `
+			<table>
+				<th>id</th><th>有效状态</th><th>使用状态</th><th>cdk码</th><th>分割cdk码</th><th>活动类型</th><th>活动id</th>
+				<body>`;
+			$.each(data.list, function(key, value){
+				html += `
+				<tr><td>` + value.id + `</td><td>` + value.isactive + `</td><td>` + value.use_type + `</td><td>` + value.cdk + `</td><td>` + value.cdk_4 + `</td><td>` + value.crm_promo_type + `</td><td>` + value.crm_promo_id + `</td></tr>`;
+			});
+			html += `
+				</body>
+			</table>`;
+			$(".x-body").html(html);
+		});
+	}
+</script>
+</html>

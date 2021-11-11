@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title></title>
+    <script src="../_public/head.js"></script>
+    <style type="text/css">
+        * {
+            box-sizing: border-box;
+        }
+
+        .phone_box {
+            width: 300px;
+            height: 500px;
+            position: relative;
+        }
+
+        .menu_box {
+            width: 316px;
+            border-bottom: 1px solid #ccc;
+            position: absolute;
+            bottom: 0px;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            ;
+        }
+
+        .menu_box img {
+            width: 80%;
+        }
+
+        .menu_k {
+            height: 300px;
+            float: left;
+            bottom: 0px;
+            overflow: hidden;
+            width: 16%;
+            position: relative;
+        }
+
+        .menu_button_k {
+            height: 50px;
+            border-top: 1px solid #ccc;
+            overflow: hidden;
+            background-color: #FCFBFB;
+            width: 100%;
+            position: absolute;
+            bottom: 0px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .menu {
+            height: 300px;
+            float: left;
+            bottom: 0px;
+            width: 28%;
+            position: relative;
+        }
+
+        .menu_button {
+            height: 50px;
+            border-top: 1px solid #ccc;
+            background-color: #FCFBFB;
+            width: 100%;
+            border-left: 1px solid #ccc;
+            text-align: center;
+            line-height: 50px;
+            position: absolute;
+            bottom: 0px;
+        }
+
+        .sub_menu {
+            position: absolute;
+            bottom: 50px;
+            width: 100%;
+            display: none;
+        }
+
+        .sub_menu_view {
+            position: absolute;
+            bottom: 55px;
+            width: 100%;
+            border-left: 1px solid #ccc;
+            border-right: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        .sub_menu_view::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            width: 5px;
+            height: 5px;
+            border-right: 1px solid #ccc;
+            border-bottom: 1px solid #ccc;
+            background: #fff;
+            transform: rotate(45deg);
+            -ms-transform: rotate(45deg);
+            /* IE 9 */
+            -moz-transform: rotate(45deg);
+            /* Firefox */
+            -webkit-transform: rotate(45deg);
+            /* Safari 和 Chrome */
+            -o-transform: rotate(45deg);
+        }
+
+        .sub_button {
+            box-sizing: border-box;
+            height: 51px;
+            border-top: 1px solid #ccc;
+            background-color: #FCFBFB;
+            width: 100%;
+            text-align: center;
+            vertical-align: center;
+            line-height: 50px;
+            float: right;
+        }
+
+        .sub_button:last-child {
+            border-bottom: 1px solid #ccc;
+        }
+
+        .edit_box {
+            height: 550px;
+            padding: 0px 20px;
+            color: #666;
+        }
+
+        .edit_box .title {
+            line-height: 50px;
+        }
+
+        .edit_box .title label {
+            float: left;
+            text-align: center;
+            width: 15%;
+            color: #666;
+            font-weight: 400;
+        }
+
+        .edit_box .title .input_text {
+            height: 30px;
+            line-height: 30px;
+            border: 1px solid #ccc;
+            padding: 0 12px;
+        }
+
+        .edit_box .title .input_text_1 {
+            height: 30px;
+            line-height: 30px;
+            margin: 10px 0;
+            width: 80%;
+            padding: 0 12px;
+            border: 1px solid #ccc;
+        }
+
+        .edit_box .title .input_radio {
+            color: #666;
+            margin-right: 3px;
+        }
+
+        .edit_box .border_box {
+            border: 1px solid #ccc;
+            height: 320px;
+            /* padding: 0px 20px; */
+        }
+
+        .edit_box .line {
+            border-top: 1px solid #ccc;
+            height: 10px;
+            clear: both;
+        }
+
+        .edit_box .none_line {
+            clear: both;
+        }
+
+        .edit_box .contents {
+            line-height: 50px;
+            width: 80%;
+            float: left;
+            padding: 0px;
+        }
+
+        .edit_box .contents p {
+            height: auto;
+            color: #aaa;
+        }
+
+        .edit_box .menu_type p {
+            line-height: 50px;
+            height: auto;
+            color: #666;
+            float: left;
+            margin-right: 20px;
+        }
+
+        .edit_box .material_button {
+            background: #f6f8f9;
+            border: 0px;
+            line-height: 20px;
+            width: 50%;
+            padding: 10px 0;
+        }
+
+        .edit_box .material_button_check {
+            background: #f6f8f9;
+            width: 50%;
+            border: 0px;
+            color: #34A123;
+        }
+
+        .title.border_box>div {
+            width: 100%;
+            /*height: 100%;*/
+        }
+
+        .edit_box .material_content {
+            width: 100%;
+            height: 280px;
+            overflow-y: auto;
+        }
+
+        .material_list {
+            overflow: hidden;
+        }
+
+        .material_list>div {
+            float: left;
+            width: 30%;
+            margin: 10px 1.53%;
+            background: #fff;
+            position: relative;
+        }
+
+        .edit_box .material_content .material_border {
+            border: solid 1px #aaa;
+        }
+
+        .edit_box .material_content .material_border .checked_material {
+            bottom: 0;
+        }
+
+        .edit_box .material_content .material_a {
+            position: relative;
+        }
+
+        .edit_box .material_content .material_a1 .thumb_media_title {
+            position: relative;
+            margin-bottom: 8px;
+        }
+
+        .edit_box .material_content .material_a1 .thumb_media_title i {
+            width: 100%;
+            height: auto;
+            background-size: cover;
+            background-position: 50% 50%;
+            background-repeat: no-repeat;
+            background-color: #F6F8F9;
+            padding-bottom: 56.25%;
+            display: block;
+        }
+
+        .edit_box .material_content .material_a1 .thumb_media_title p {
+            margin: 0;
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 8px 12px;
+            background-color: rgba(0, 0, 0, 0.55);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 400;
+            display: block;
+            font-size: 14px;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
+
+        .edit_box .material_content .material_a2 .thumb_media_title {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+        }
+
+        .edit_box .material_content .material_a2 .thumb_media_title i {
+            width: 40px;
+            height: 40px;
+            margin-left: 10px;
+            -webkit-background-size: cover;
+            background-size: cover;
+            background-position: 50% 50%;
+            background-repeat: no-repeat;
+            background-color: #F6F8F9;
+        }
+
+        .edit_box .material_content .material_a2 .thumb_media_title p {
+            line-height: normal;
+            font-weight: 400;
+            word-wrap: break-word;
+            hyphens: auto;
+            color: #353535;
+            font-size: 14px;
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            width: -webkit-calc(100% - 50px);
+            width: calc(100% - 50px);
+        }
+
+        .edit_box .material_content .material_a:hover>.thumb_media_a {
+            display: block !important;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.65);
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            text-align: center;
+        }
+
+        .edit_box .material_content .material_a:hover a {
+            color: #fff;
+            display: block !important;
+            position: absolute;
+            line-height: normal;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .checked_material {
+            background: rgba(0, 0, 0, 0.3);
+            position: absolute;
+            width: 100%;
+            top: 0;
+            bottom: 50px;
+            left: 0;
+            z-index: 99;
+        }
+
+        .edit_box .material_content .material_a .checked_material {
+            bottom: 0;
+        }
+
+        .checked_material img {
+            color: #fff;
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            border-radius: 50%;
+            top: 50%;
+            position: absolute;
+            right: 12px;
+            transform: translateY(-50%);
+        }
+
+        .checkMaterialall {
+            color: #34A123;
+            padding: 0 12px;
+            text-align: center;
+        }
+
+        .edit_box .material_content .more_matarial {
+            width: 100%;
+            color: #666;
+            line-height: normal;
+            padding: 12px 0;
+            text-align: center;
+        }
+
+        .appphone_header {
+            background-image: url('../_public/images/app_01.png');
+            width: 361px;
+            height: 91px;
+        }
+
+        .phone_box {
+            background-image: url('../_public/images/app_02.png');
+            width: 361px;
+            min-height: 550px;
+            position: relative;
+        }
+
+        .appphone_top {
+            width: 316px;
+            margin-left: 23px;
+            background-image: url('../_public/images/ceremony_top.png');
+            background-repeat: no-repeat;
+            height: 61px;
+            color: #fff;
+            position: relative;
+            text-align: center;
+            padding-top: 30px;
+        }
+
+        .appphone_bottom {
+            background-image: url('../_public/images/app_03.png');
+            width: 361px;
+            height: 91px;
+        }
+
+        #delete_label {
+            float: right;
+            color: #576b95;
+            font-size: 13px;
+        }
+
+        #material_type {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #material_type>.material_button {}
+    </style>
+</head>
+
+<body>
+    <section class="row panel col-md-12" style="margin-left:0px; background: #F5F5F9;">
+        <!-- <header class="panel-heading" style=" padding: 0 20px;">
+            <div>公众号菜单设置
+                <a href="{:U('index')}" class="fa fa-reply pull-right" style="font-size:30px;"></a>
+            </div>
+        </header> -->
+        <!-- 开始 显示tab内容 -->
+        <div class="tab-content" style="padding: 20px 20px 80px 20px;">
+            <!-- start tab 1 base -->
+            <div class="tab-pane active" style="display: flex;" id="base">
+                <div class="panel-body">
+                    <!-- <div class="appphone_header">
+                    </div> -->
+                    <div class="phone_box">
+                        <div class="appphone_top">
+                            <span class="apptop_tittle" data-bind="text:brandName">纪念日百货</span>
+                        </div>
+                        <div class="menu_box">
+                        </div>
+                    </div>
+                    <!-- <div class="appphone_bottom">
+                    </div> -->
+                </div>
+
+                <div class="panel-body" style="min-width: 700px; width: 60%; padding: 0 20px;">
+                    <div class="" style="background-color: #fff; border-radius: 10px">
+                        <div class="edit_box" id="edit_box">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div
+                style="background: #ffffff; bottom: 0; width: 100%; right: 0; left: 0; position: fixed;text-align:center;padding: 10px 0;">
+                <button onclick="menu_edit();"
+                    style="color: #fff;background-color: #8bc34a;padding: 12px 0;border:none;width:120px;border-radius: 2px">
+                    提交
+                </button>
+            </div>
+        </div>
+    </section>
+
+</body>
+<script type="text/javascript">
+    window.onload = function () {
+        get_menu();
+    }
+
+    // 提交
+    function menu_edit() {
+        var menus = document.getElementsByClassName('menu_box')[0].getElementsByClassName('menu');
+        var arrs = new Object();
+        arrs['button'] = new Array();
+        for (var i = 0; i < menus.length; i++) {
+            var this_menu_button = menus[i].getElementsByClassName('menu_button')[0];
+            arrs['button'][i] = new Object();
+            arrs['button'][i]['name'] = this_menu_button.getAttribute('data-name');
+            if (this_menu_button.getAttribute('data-type') == 'view') {
+                arrs['button'][i]['type'] = 'view';
+                arrs['button'][i]['url'] = this_menu_button.getAttribute('data-url');
+            } else if (this_menu_button.getAttribute('data-type') == 'sub_button') {
+                arrs['button'][i]['sub_button'] = new Array();
+                var sub_menu = menus[i].getElementsByClassName('sub_menu');
+                if (sub_menu.length < 1) {
+                    var sub_menu = menus[i].getElementsByClassName('sub_menu_view');
+                }
+                var sub_button = sub_menu[0].getElementsByClassName('sub_button');
+                for (var m = 0; m < sub_button.length; m++) {
+                    if (sub_button[m].getAttribute('data-type') != 'add_button') {
+                        arrs['button'][i]['sub_button'][m] = new Object();
+                    }
+                    if (sub_button[m].getAttribute('data-type') == 'view') {
+                        arrs['button'][i]['sub_button'][m]['type'] = sub_button[m].getAttribute('data-type');
+                        arrs['button'][i]['sub_button'][m]['url'] = sub_button[m].getAttribute('data-url');
+                        arrs['button'][i]['sub_button'][m]['name'] = sub_button[m].getAttribute('data-name');
+                    } else if (sub_button[m].getAttribute('data-type') == 'miniprogram') {
+                        arrs['button'][i]['sub_button'][m]['type'] = sub_button[m].getAttribute('data-type');
+                        arrs['button'][i]['sub_button'][m]['url'] = sub_button[m].getAttribute('data-url');
+                        arrs['button'][i]['sub_button'][m]['name'] = sub_button[m].getAttribute('data-name');
+                        arrs['button'][i]['sub_button'][m]['appid'] = sub_button[m].getAttribute('data-appid');
+                        arrs['button'][i]['sub_button'][m]['pagepath'] = sub_button[m].getAttribute('data-pagepath');
+                    } else if (sub_button[m].getAttribute('data-type') == 'media_id') {
+                        arrs['button'][i]['sub_button'][m]['type'] = sub_button[m].getAttribute('data-type');
+                        arrs['button'][i]['sub_button'][m]['name'] = sub_button[m].getAttribute('data-name');
+                        arrs['button'][i]['sub_button'][m]['media_id'] = sub_button[m].getAttribute('data-media_id');
+                    }
+                }
+            } else if (this_menu_button.getAttribute('data-type') == 'miniprogram') {
+                arrs['button'][i]['type'] = 'miniprogram';
+                arrs['button'][i]['url'] = this_menu_button.getAttribute('data-url');
+                arrs['button'][i]['name'] = this_menu_button.getAttribute('data-name');
+                arrs['button'][i]['appid'] = this_menu_button.getAttribute('data-appid');
+                arrs['button'][i]['pagepath'] = this_menu_button.getAttribute('data-pagepath');
+            } else if (this_menu_button.getAttribute('data-type') == 'media_id') {
+                arrs['button'][i]['type'] = 'media_id';
+                arrs['button'][i]['name'] = this_menu_button.getAttribute('data-name');
+                arrs['button'][i]['media_id'] = this_menu_button.getAttribute('data-media_id');
+            }
+            // else if (this_menu_button.getAttribute('data-type') == 'click') {
+            //     arrs['button'][i]['type'] = 'click';
+            //     arrs['button'][i]['name'] = this_menu_button.getAttribute('data-name');
+            //     arrs['button'][i]['key'] = this_menu_button.getAttribute('data-media_id');
+            // }
+        }
+        //console.log(arrs);
+        var jsonString = JSON.stringify(arrs);
+        console.log(jsonString);
+        $.post(crm.api_local + "/WxProgram/subMenu.html", {
+            content: jsonString
+        }, function (data) {
+            if (data.code > 0 && data.message == 'ok') {
+                alert('提交成功');
+            } else {
+                alert(data.message + '提交失败,可复制后面内容发送给开发者进行恢复:' + jsonString);
+            }
+        })
+    }
+    // 获取主菜单栏 
+    function get_menu() {
+        crm.post(crm.api_local + "/WxProgram/getMenu.html", {}, function (res) {
+            if (!res) {
+                alert('获取菜单数据失败，请刷新重试！');
+            } else {
+                var datas = eval(res)['menu']['button'];
+                console.log(datas)
+                var html = `
+                       <div class="menu_k">
+                           <div class="menu_button_k">
+                               <img src="../_public/images/menu_keyboard.png">
+                           </div>
+                       </div>
+                                   `;
+
+                $.each(datas, function (i, val) {
+                    if (val.type) {
+                        // 没有二级菜单，可以直接跳转
+                        if (val.type == 'view') {
+                            html += `
+                       <div class="menu">
+                           <div class="menu_button" onclick="menu_button(this);" data-type="view" data-name="${val
+                                .name}" data-url="${val.url}">
+                               <p>${val.name}</p>
+                           </div>
+                           <div class="sub_menu">
+                               <div class="sub_button" data-type="add_button" onclick="edit_menu(this);">
+                                   <img src="../_public/images/menu_add.png">
+                               </div>
+                           </div>
+                       </div>
+                                           `;
+                        }
+                    } else if (val.sub_button) {
+                        html += `
+                       <div class="menu">
+                           <div class="menu_button" onclick="menu_button(this);" data-type="sub_button" data-name="${val.name}">
+                               <p>${val.name}</p>
+                           </div>
+                           <div class="sub_menu">
+                               `;
+
+                        $.each(val.sub_button.list, function (m, valm) {
+                            html += `
+                               <div class="sub_button" data-type="${valm.type}" data-name="${(valm.name || '')}" data-url="${(valm.url || '')}" data-appid="${(valm.appid || '')}" data-pagepath="${(valm.pagepath ||
+                                    '')}" data-media_id="${(valm.media_id || '')}" data-appid="${(valm.appid ||
+                                    '')}" onclick="edit_menu(this);">
+                                   <p>${valm.name}</p>
+                               </div>
+                                       `;
+                        });
+                        if (val.sub_button.list.length < 5) {
+                            html += `
+                               <div class="sub_button" data-type="add_button" onclick="edit_menu(this);">
+                                   <img src="../_public/images/menu_add.png">
+                               </div>
+                                   `;
+                        }
+                        html += `
+                           </div>
+                       </div>
+                               `;
+                    }
+                });
+            }
+
+            $('.menu_box').html(html);
+        });
+    }
+    // 
+    function menu_button(obj) {
+        var sub_menu_view = $('.sub_menu_view');
+        for (var i = 0; i < sub_menu_view.length; i++) {
+            sub_menu_view[i].className = 'sub_menu';
+        }
+        var sub_menu = obj.parentNode.getElementsByClassName('sub_menu');
+        //console.log(sub_menu);
+        for (var i = 0; i < sub_menu.length; i++) {
+            sub_menu[i].className = 'sub_menu_view';
+        }
+        edit_menu(obj);
+    }
+
+    //async function edit_menu(obj){
+    // 右侧编辑页面
+    function edit_menu(obj) {
+        var menu_type = obj.getAttribute('data-type');
+        var menu_class = obj.className;
+        if (menu_type !== 'sub_button' && menu_type !== 'add_button') {
+            // menu_type == view || miniprogram || media_id
+            // 二级菜单不是新建菜单
+            // 一级菜单，不含二级菜单，类型是网页
+            var html =
+                `
+                    <div class="title">
+                        <label>菜单名称</label>
+                        <label id="delete_label">删除菜单</label>
+                    </div>
+                    <div class="line"></div>
+                    <div class="title">
+                        <label>菜单名称</label>
+                        <div class="contents">
+                            <input class="input_text" type="text" maxlength="14" name="edit_input" data-type="data-name" value="${obj.getAttribute('data-name')}">
+                            <p>仅支持中英文和数字，字数不超过4个汉字或8个字母</p>
+                        </div>
+                    </div>
+                    <div class="line"></div>
+                    <div class="title">
+                        <label>菜单内容</label>
+                        <div class="contents menu_type" id="view_border_box">
+                            <p><input class="input_radio" type="radio" name="menu_type" value="media_id" ${menu_type == 'media_id'? 'checked' : ''}>发送消息</p>
+                            <p><input class="input_radio" type="radio" name="menu_type" value="view" ${menu_type == 'view' || menu_type == 'add_button'? 'checked' : ''}>跳转网页</p>
+                            <p><input class="input_radio" type="radio" name="menu_type" value="miniprogram" ${menu_type == 'miniprogram'? 'checked' : ''}>跳转小程序</p>
+                        </div>
+                    </div>
+                    <div class="none_line"></div>
+                    <div class="title border_box">
+                        <div id="border_box_media_id" style="display: ${obj.getAttribute('data-type') !== 'media_id'? 'none':''};">
+                            <div id="material_type">
+                                <button type="button" class="material_button" data-type="news">图文</button>
+                                <button type="button" class="material_button" data-type="image">图片</button>
+                            </div>
+                            <div id="material_content_box" class="material_content">
+                            </div>
+                        </div>
+                        <div id="border_box_url" style="display: ${obj.getAttribute('data-type') == 'media_id'? 'none':''};">
+                            <label>链接</label>
+                            <div class="contents">
+                                <input class="input_text_1" type="text" name="edit_input" data-type="data-url" value="` +
+                obj.getAttribute('data-url') + `">
+                            </div>
+                        </div>
+                        <div style="clear:both;">
+                        <div id="border_box_appid" style="display: ${obj.getAttribute('data-type') !== 'miniprogram'? 'none':''};">
+                            <label>appid</label>
+                            <div class="contents">
+                                <input class="input_text_1" type="text" name="edit_input" data-type="data-appid" value="` +
+                obj.getAttribute('data-appid') + `">
+                            </div>
+                        </div>
+                        <div style="clear:both;">
+                        <div id="border_box_pagepath" style="display: ${obj.getAttribute('data-type') !== 'miniprogram'? 'none':''};">
+                            <label>页面</label>
+                            <div class="contents">
+                                <input class="input_text_1" type="text" name="edit_input" data-type="data-pagepath" value="` +
+                obj.getAttribute('data-pagepath') + `">
+                            </div>
+                        </div>
+                    </div>
+                    `;
+        } 
+        else if (menu_type == 'add_button') {
+            obj.innerHTML = '<p>新建菜单</p>';
+            obj.setAttribute('data-name', '新建菜单');
+            obj.setAttribute('data-type', 'view');
+            obj.setAttribute('data-url', '');
+            if (clear_text(obj.parentNode.childNodes).length < 5) {
+                $(obj.parentNode).append(`
+                                <div class="sub_button" data-type="add_button" onclick="edit_menu(this);">
+                                    <img src="../_public/images/menu_add.png">
+                                </div>
+                    `);
+            }
+            // 新建菜单的父级菜单data-type变为sub_button
+            obj.parentNode.parentNode.getElementsByClassName('menu_button')[0].setAttribute('data-type',
+                'sub_button');
+        } 
+        else if (menu_type == 'sub_button') {
+            // 一级菜单,含二级菜单
+            var html =
+                `
+                    <div class="title">
+                        <label>菜单名称</label>
+                    </div>
+                    <div class="line"></div>
+                    <p>已添加子菜单，仅可设置菜单名称</p>
+                    <div class="title">
+                        <label>菜单名称</label>
+                        <div class="contents">
+                            <input class="input_text" type="text" maxlength="14" name="edit_input" data-type="data-name" value="` +
+                obj.getAttribute('data-name') + `">
+                            <p>仅支持中英文和数字，字数不超过4个汉字或8个字母</p>
+                        </div>
+                    </div>
+                    `;
+        }
+        
+        $('#edit_box').html(html);
+
+        //save_edit(obj);
+        var edit_inputs = $('[name="edit_input"]');
+        for (var i = 0; i < edit_inputs.length; i++) {
+            edit_inputs[i].onkeyup = function () {
+                save_edit(obj)
+            }
+        }
+
+        $(".material_button").click(function () {
+            post_material($(this), obj);
+        });
+        if (menu_type != 'sub_button') {
+            $('#view_border_box').click(function () {
+                view_border_box($('#view_border_box'), obj);
+            })
+        }
+
+        //暂不支持删除一级菜单
+        if (menu_class != 'menu_button') {
+            $('#delete_label').click(function(){
+                var parent_childs = clear_text(obj.parentNode.childNodes);
+                var parent_obj = obj.parentNode;
+                if (parent_childs[parent_childs.length - 1].getAttribute('data-type') != 'add_button') {
+                    $(obj.parentNode).append(`
+                                <div class="sub_button" data-type="add_button" onclick="edit_menu(this);">
+                                    <img src="../_public/images/menu_add.png">
+                                </div>
+                    `);
+                }
+                //删除菜单
+                obj.parentNode.removeChild(obj);
+
+                //如果删除最后一个子菜单 则转一级菜单为view
+                if (clear_text(parent_obj.childNodes).length == 1 && clear_text(parent_obj.childNodes)[0]
+                    .getAttribute('data-type') == 'add_button') {
+                    parent_obj.parentNode.getElementsByClassName('menu_button')[0].setAttribute('data-type',
+                        'view');
+                    if (!parent_obj.parentNode.getElementsByClassName('menu_button')[0].getAttribute('data-url')) {
+                        parent_obj.parentNode.getElementsByClassName('menu_button')[0].setAttribute('data-url',
+                            'http://go.jinianri.com');
+                    }
+                }
+
+                //删除编辑页面
+                $('#edit_box').html('');
+            
+            }) 
+        }
+    }
+   
+    function save_edit(obj) {
+        //console.log(obj);
+        var edit_inputs = $('[name = "edit_input"]');
+        for (var i = 0; i < edit_inputs.length; i++) {
+            obj.setAttribute(edit_inputs[i].getAttribute('data-type'), edit_inputs[i].value);
+            if (edit_inputs[i].getAttribute('data-type') == 'data-name') {
+                obj.getElementsByTagName('p')[0].innerHTML = edit_inputs[i].value;
+            }
+        }
+    }
+    // 切换类型
+    function view_border_box(obj, obj1) {
+        var radios = $("[name='menu_type']");
+        for (var i = 0; i < radios.length; i++) {
+            if (radios[i].checked == true) {
+                $(obj1).attr('data-type', radios[i].value);
+                if (radios[i].value == 'media_id') {
+                    $('#border_box_media_id').show();
+                    $('#border_box_url').hide();
+                    $('#border_box_appid').hide();
+                    $('#border_box_pagepath').hide();
+                } else if (radios[i].value == 'view') {
+                    $('#border_box_media_id').hide();
+                    $('#border_box_url').show();
+                    $('#border_box_appid').hide();
+                    $('#border_box_pagepath').hide();
+                } else if (radios[i].value == 'miniprogram') {
+                    $('#border_box_media_id').hide();
+                    $('#border_box_url').show();
+                    $('#border_box_appid').show();
+                    $('#border_box_pagepath').show();;
+                }
+            }
+        }
+    }
+
+    function clear_text(child) {
+        var postChild = new Array();
+        for (var i = 0; i < child.length; i++) {
+            if (!(child[i].nodeType == '3' && child[i].nodeName == '#text' && !/\S/.test(child[i].nodeValue))) {
+                //文本节点并且是空的文本节点时，将空文本节点删除
+                postChild.push(child[i])
+            }
+        }
+        return postChild;
+    }
+// 选中发送消息类型，点击图文图片获取详情
+    function post_material(obj, menu_obj, page = 0) {
+        var type = $(obj).attr('data-type');
+        $(".material_button_check").attr("class", "material_button");
+        $(obj).attr("class", "material_button_check");
+        $(".more_matarial").remove();
+        crm.post(crm.api_local + "/WxProgram/getMaterial.html", {
+            type: type,
+            page: page
+        }, function (data) {
+            if (data.item && data.item.length > 0) {
+                var html = '';
+                html += `<div class="material_list">`;
+                if (type == 'news') {
+                    $.each(data.item, function (i, val) {
+                        html += `
+                                    <div id="` + val.media_id + `" class="material_border">`;
+                        if (val.content.news_item && val.content.news_item.length > 0) {
+                            $.each(val.content.news_item, function (it, valt) {
+                                var _class_name = 'material_a1';
+                                if (it > 0) {
+                                    _class_name = 'material_a2';
+                                }
+                                html += `
+                                        <div class="material_a ` + _class_name + `" id="` + valt.thumb_media_id + `">
+                                            <div class="thumb_media_title">
+                                                <p>` + valt.title + `</p>
+                                                <i style="background-image: url('` + valt.thumb_url + `');"></i>
+                                            </div>
+                                            <div class="thumb_media_a" style="display: none;"></div>
+                                            <a href="` + valt.url + `" style="display: none;" target="_blank">查看详情</a>
+                                        </div>`;
+                            });
+                        }
+                        html += `
+                                        <div class="checkMaterialall">选中整个图文</div>
+                                    </div>`;
+                    });
+                } else if (type == 'image') {
+                    $.each(data.item, function (i, val) {
+                        html += `
+                                    <div id="` + val.media_id + `" class="material_border">
+                                        <img width="100%" src="` + val.url + `"class="checkMaterialall">
+                                    </div>`;
+                    });
+                }
+
+                html += `
+                            </div>
+                            <div class="more_matarial">加载更多</div>`;
+                if (page < 1) {
+                    $('#material_content_box').empty();
+                }
+                $('#material_content_box').append(html);
+
+                $(".thumb_media_a").click(function () {
+                    checkMaterial($(this), menu_obj);
+                });
+                $(".checkMaterialall").click(function () {
+                    checkMaterial($(this), menu_obj);
+                });
+                $(".more_matarial").click(function () {
+                    post_material(obj, menu_obj, page + 1);
+                });
+            }
+
+        })
+    }
+// 选中图文，图片
+    function checkMaterial(obj, menu_obj) {
+        // e.preventDefault();
+        if (confirm('确定选中吗') !== true) {
+            return false;
+        }
+        $(".checked_material").remove();
+        var html = `
+                                        <div class="checked_material">
+                                            <img src="../_public/images/checkAll.png" alt="">
+                                        </div>`;
+
+        $(obj).parent().append(html);
+
+        //获取media_id
+        console.log($(obj).parent().attr("id"));
+
+        menu_obj.setAttribute('data-media_id', $(obj).parent().attr("id"));
+    }
+</script>
+
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>编辑用户组权限</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<button class="layui-btn layui-btn-new" onclick="add();">新增</button>
+		<div id="operate_list" class="table-demo"></div>
+	</div>
+</body>
+
+<script src="../_public/refresh.js"></script>
+<script type="text/javascript">
+	var _param = crm.getParam({id:''});
+	var add_i = 0;
+
+	userList();
+
+	function userList(){
+		crm.post(crm.api_local + "/user/group", {id: _param['id']}, function(data){
+			layui.use('form', function(){
+				var form = layui.form;
+
+				var html_list = '';
+				var _html_list = '';
+
+				$.each(data.list[0].operate_list, function(i, val){
+					_html_list += `
+						<tr id="tr_` + i + `">
+							<td name="td_id">` + val.id + `</td>
+							<td name="td_operate_id"><input class="layui-input" name="user_id" readonly="readonly" value="` + val.admin_operate_id + `"></td>
+							<td name="td_operate">` + val.operate + `</td>
+							<td name="td_title">` + val.title + `</td>
+							<td name="td_isactive">
+								<div class="layui-form">
+									<input type="checkbox" lay-skin="switch" lay-text="是|否" ` + (val.isactive == 'Y' ? 'checked="checked"' : '') + `>
+								</div>
+							</td>
+							<td><button class="layui-btn layui-btn-sm" onclick="subGroupAuthority('tr_` + i + `');">提交</button></td>
+						</tr>`;
+				});
+
+				html_list = `
+				<table class="layui-table">
+					<thead>
+						<tr>
+							<td>id</td>
+							<td>操作编号</td>
+							<td>操作地址</td>
+							<td>操作标题</td>
+							<td>可用</td>
+							<td>操作</td>
+						</tr>
+					</thead>
+					<tbody id="tbody">` + _html_list + `
+					</tbody>
+				</table>`;
+
+				$("#operate_list").empty().append(html_list);
+
+				form.render();
+			});
+		});
+	}
+
+	function subGroupAuthority(tr_id){
+		var sub_param = {
+			id: '',
+			admin_user_group_id: _param['id'],
+			admin_operate_id: '',
+			isactive: 'Y',
+		};
+
+		var _tr = $("#" + tr_id);
+
+		if( _tr.children("td[name='td_id']").find("input").length > 0 ){
+			sub_param['id'] = 'new';
+		}else{
+			var _id = _tr.children("td[name='td_id']").html();
+			sub_param['id'] = _id ? _id : 'error';
+		}
+		sub_param['admin_operate_id'] = _tr.find("[name='operate_id']").val();
+		if(_tr.children("td[name='td_isactive']").find("input").prop('checked')){
+			sub_param['isactive'] = 'Y' 
+		} else {
+			sub_param['isactive'] = 'N' 
+		}
+
+		console.log(sub_param);
+
+		crm.post(crm.api_local + "/user/editGroupAuthority", sub_param, function(data){
+			console.log(data);
+		});
+	}
+
+	function add(){
+		layui.use(['layer', 'form'], function(){
+			var form = layui.form,
+				indexs = layer.load(2);
+
+			add_i ++ ;
+			//这里改成点击按钮出现此行
+			var html = `
+					<tr id="new_tr` + add_i + `">
+						<td name="td_id"><input class="layui-input" onkeyup="getOperateList(this);" value="" placeholder="搜索操作"></td>
+						<td name="td_operate_id"></td>
+						<td name="td_operate"></td>
+						<td name="td_title"></td>
+						<td name="td_isactive">
+							<div class="layui-form">
+								<input type="checkbox" lay-skin="switch" lay-text="可用|禁用" checked>
+							</div>
+						</td>
+						<td><button class="layui-btn layui-btn-sm" onclick="subGroupAuthority('new_tr` + add_i + `');">提交</button></td>
+					</tr>`;
+			$("#tbody").prepend(html);
+
+			form.render();
+			layer.close(indexs);
+		});
+	}
+
+	function getOperateList(obj){
+		layui.use('form', function(){
+			var form = layui.form;
+			var keyword = obj.value;
+			crm.post(crm.api_local + "/operate/index", {keyword: keyword, step: 'over'}, function(data){
+				console.log(data);
+				var _html_user_id = `
+							<div class="layui-form"><select name="operate_id" onchange="selectAll(this);">`;
+				var _html_username = `
+							<div class="layui-form"><select name="operate" onchange="selectAll(this);">`;
+				var _html_nickname = `
+							<div class="layui-form"><select name="title" onchange="selectAll(this);">`;
+
+				$.each(data.list, function(key, value){
+					_html_user_id += `
+								<option value="` + value.id + `">` + value.id + `</option>`;
+					_html_username += `
+								<option value="` + value.id + `">` + value.operate + `</option>`;
+					_html_nickname += `
+								<option value="` + value.id + `">` + value.title + `</option>`;
+				});
+
+				_html_user_id += `
+							</select></div>`;
+				_html_username += `
+							</select></div>`;
+				_html_nickname += `
+							</select></div>`;
+
+				$(obj).parents('tr').find("td[name='td_operate_id']").html(_html_user_id);
+				$(obj).parents('tr').find("td[name='td_operate']").html(_html_username);
+				$(obj).parents('tr').find("td[name='td_title']").html(_html_nickname);
+
+				form.render();
+			});
+		});
+	}
+
+	function selectAll(obj){
+		var operate_id = $(obj).val();
+
+		$(obj).parents('tr').find("select[name='operate_id']").val(operate_id);
+		$(obj).parents('tr').find("select[name='operate']").val(operate_id);
+		$(obj).parents('tr').find("select[name='title']").val(operate_id);
+	}
+</script>
+</html>

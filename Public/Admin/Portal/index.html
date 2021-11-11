@@ -1,0 +1,253 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<button class="layui-btn layui-btn-new" id="other_operate"><i class="iconfont">&#xe699;</i></button>
+		<button class="layui-btn layui-btn-new add-btn">新增</button>
+
+		<div class="portal-form layui-form" id="search"></div>
+
+		<div class="table-demo" id="list"></div>
+	</div>
+</body>
+
+<script src="../_public/refresh.js"></script>
+<script type="text/javascript">
+	// var _param = crm.getParam({table_name: ''});
+	var _param = crm.getParam('');
+	var list = [];
+	var all_data = {};
+	var backData = {};
+	var _param_status = true;
+
+	_init();
+
+	function _init(){
+		var search_list = {};
+		var search_page_info = {};
+		var search_input = $("#search").find("input");
+		var search_select = $("#search").find("select");
+		// console.log(search_input);
+		$.each(search_input, function(){
+			if( $(this).attr('id') ){
+				search_list[$(this).attr('id')] = $(this).val();
+			}
+		});
+		// console.log(search_select);
+		$.each(search_select, function(){
+			if( $(this).attr('id') ){
+				search_list[$(this).attr('id')] = $(this).val();
+			}
+			if( $(this).attr('data-ids') ){
+				search_page_info[$(this).attr('data-ids')] = $(this).val();
+			}
+		});
+
+		if(_param_status){
+			$.each(_param, function(key, value){
+				if(key != 'table_name'){
+					search_list[key] = value;
+				}
+			});
+		}
+		_param_status = false;
+		// console.log(search_list);
+
+		crm.post(crm.api_local + "/Portal/index", {table_name: _param['table_name'], search_list: search_list, search_page_info: search_page_info, data_list: 'Y'}, function(data){
+			layui.use(['form', 'dropdown'], function(){
+				var form = layui.form;
+				var dropdown = layui.dropdown;
+				dropdown.render({
+					elem: '#other_operate',
+					data: [
+						{
+							title: '批量编辑',
+							id: '1'
+						}
+					],
+					click: function(obj){
+						if(obj.title == '批量编辑'){
+							console.log(backData);
+							var backDataId = '';
+							$.each(backData, function(backDataKey, backDataVal){
+								backDataId += backDataKey + ';';
+							});
+							console.log(backDataId)
+							xadmin.open('批量编辑', crm.app_local + '/Portal/info.html?table_name='+ _param['table_name'] + '&id=' + backDataId);
+						}
+					}
+				});
+
+				var html_list = '';
+				var _html_list = '';
+
+				var _cols_th = '';
+
+				//构建外键的obj数据 并 生成搜索框外键展开（封装方法）
+				var _source_list = crm.searchBoxHtml($("#search"), data.dict_columns, search_list, '_init();');
+
+				$.each(data.dict_columns, function(i, val){
+					_cols_th += `
+						<th>` + val.title + `</th>`;
+				});
+
+				if(data.list && data.list.length > 0){
+					$.each(data.list, function(i, val){
+						all_data[val.id] = val;
+						var _cols_tb = '';
+						$.each(data.dict_columns, function(key, value){
+							var _val = val[value['columns_name']];
+
+							var _min_width = 50;
+							var _width = '';
+							value.data_length = parseInt(value.data_length);
+							//判断字段类型
+							if(value.data_length <= 10){
+								_min_width = _min_width - 10;
+							}
+							if(value.data_length <= 5){
+								_min_width = _min_width - 10;
+							}
+							if(value.data_type == 'DATE'){
+								_width = ' width: 75px';
+							}
+							//展开外键按钮
+							var _source_button = '';
+							var _source_cols_list = '';
+							if( typeof _source_list[value['columns_name']] == 'object' ){
+								_source_button += `
+								<button class="layui-btn layui-btn-sm layui-btn-new sp-img" onclick="crm.open_portal('` + _source_list[value['columns_name']].source_info.source_table_name + `', '` + _source_list[value['columns_name']].source_info.source_columns_name + `', '` + _source_list[value['columns_name']].columns_name + `', '` + _val + `');">
+									<i class="layui-icon layui-icon-set-fill"></i>
+								</button>`;
+								// console.log(_source_list);
+								if( typeof _source_list[value['columns_name']].source_info.source_cols_list_arr == 'object' ){
+									$.each(_source_list[value['columns_name']].source_info.source_cols_list_arr, function(keyt, valuet){
+										if( val[valuet] ){
+											_source_cols_list += `
+										` + val[valuet] + `；`;
+										}else{
+											_source_cols_list += `
+										未知；`;
+										}
+									});
+									_min_width += 40;
+								}
+								
+							}
+							// console.log(_width);
+
+							_cols_tb += `
+								<td style="min-width:` + _min_width + `px; padding:5px 7px;` + (_width != '' ? _width : '') + `">
+									<div class="flex-default">`;
+							if(value['type'] == 'radio'){
+								_cols_tb += `
+										<div class="layui-form">
+											<input type="checkbox" lay-skin="switch" lay-text="是|否" ` + (_val == 'Y' ? 'checked="checked"' : '') + `>
+										</div>`;
+							// }else if(value['type'] == 'input'){
+							// 	_cols_tb += `
+							// 			<input class="layui-input" type="" value="` + _val + `">`;
+							}else if(value['type'] == 'select'){
+								_cols_tb += `
+									` + _val;
+							}else if(value['type'] == 'button'){
+								var _type_value = JSON.parse(value.type_value);
+								var _button_do = '';
+								var _params = '';
+
+								$.each(_type_value, function(keyt, valuet){
+									if( keyt != 'button_name' && keyt != 'button_href' && keyt != 'button_click' && keyt.indexOf('group_') != '-1' ){
+										if(_params == ''){
+											_params += `?` + valuet.button_param_key + `=` + (valuet.button_param_table == _param.table_name ? val[valuet.button_param_column] : valuet.button_param_value);
+										}else{
+											_params += `&` + valuet.button_param_key + `=` + (valuet.button_param_table == _param.table_name ? val[valuet.button_param_column] : valuet.button_param_value);
+										}
+									}
+								});
+
+								if(_type_value['button_href']){
+									_button_do += ` onclick="window.open('` + crm.app_local + _type_value['button_href'] + _params + `');"`;
+								}else if(_type_value['button_click']){
+
+								}
+								_cols_tb += `
+										<button type="button" name="` + key + `" class="layui-btn layui-btn-sm" ` + _button_do + `>` + _type_value['button_name'] + `</button>`;
+							}else if(value['type'] == 'singleUpload'){
+								_cols_tb += `
+										<img name="` + key + `" src="` + _val + `">`;
+							}else{
+								_cols_tb += `
+									` + _val;
+							}
+							_cols_tb += _source_button + _source_cols_list + `
+									</div>
+								</td>`;
+						});			
+						_html_list += `
+							<tr>
+								<td><input type="checkbox" name="portal_checkbox[]" onclick="setBackData(this, ` + val.id + `);"></td>
+								` + _cols_tb + `
+								<td>
+									<button class="layui-btn layui-btn-sm" onclick="xadmin.open('编辑', '` + crm.app_local + `/Portal/info.html?table_name=` + _param['table_name'] + `&id=` + val.id + `')">编辑</button>
+								</td>
+								<!-- <td>
+									<button class="layui-btn layui-btn-sm layui-btn-normal" onclick="submit(` + i + `);">提交</button>
+								</td> -->
+							</tr>`;
+					});
+				} else {
+					var num = parseInt(Object.keys(data.dict_columns).length) + 3;
+					_html_list += `
+						<tr>
+							<td colspan="` + num + `" align="center">暂无数据~</td>
+						</tr>`;
+				}
+
+				html_list = `
+				<table class="layui-table">
+					<thead>
+						<tr>
+							<th width="90px;">选中/显量/总量<br><span id="checked_data">0</span>/` + data.list.length + '/' + data.count + `</th>
+							` + _cols_th + `
+							<th>编辑</th>
+							<!-- <th>提交</th> -->
+						</tr>
+					</thead>
+					<tbody>` + _html_list + `</tbody>
+				</table>`;
+
+				$("#list").empty().append(html_list);
+
+				form.render();
+			});
+		});
+	}
+
+	$(".add-btn").click(function(){
+		xadmin.open('新增', crm.app_local + '/Portal/info.html?table_name='+ _param['table_name']);
+	})
+
+	// 提交
+	function submit(i){
+		// console.log(i)
+	}
+
+	function setBackData(obj, id){
+		var this_data = all_data[id];
+		if(obj.checked){
+			backData[id] = this_data;
+		}else{
+			delete backData[id];
+		}
+		// console.log(backData);
+	}
+
+	function callbackdata(){
+		return backData;
+	}
+</script>
+</html>

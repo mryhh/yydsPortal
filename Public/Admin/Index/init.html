@@ -1,0 +1,322 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+	<title>设置向导</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body style="width:850px;">
+	<div class="x-body">
+		<!-- <div class="layui-form"> -->
+			<div class="flex-wrap" id="setConfig">
+			</div>
+		<!-- </div> -->
+	</div>
+</body>
+</html>
+
+<script type="text/javascript">
+	var params = crm.getParam('');
+
+	if( !params.step || params.step == 'initSub' ){
+		initSub();
+	}else if(params.step == 'initPassword'){
+		initPassword();
+	}else if(params.step == 'initInsert'){
+		initInsert();
+	}else if(params.step == 'initObject'){
+		initObject(params.object_name);
+	}
+
+	function initSub(){
+		// 不用输入了  直接取浏览器的url不香吗！！
+		// var app_local_info = {};
+		// var _input = $("#app_local_info").find("input");
+		// var _select = $("#app_local_info").find("select");
+
+		// $.each(_input, function(){
+		// 	if( $(this).attr('id') ){
+		// 		app_local_info[$(this).attr('id')] = $(this).val();
+		// 	}
+		// });
+		// $.each(_select, function(){
+		// 	if( $(this).attr('id') ){
+		// 		app_local_info[$(this).attr('id')] = $(this).val();
+		// 	}
+		// });
+
+		// console.log(app_local_info);
+
+		// if(app_local_info.app_local_server == ''){
+		// 	alert('未输入！');
+		// 	return false;
+		// }else{
+		// 	crm.post(app_local_info.app_local_http + app_local_info.app_local_server + "/adminApi/index/initJs", {app_local_info: app_local_info}, function(data){
+		// 		console.log(data);
+		// 	});
+		// }
+
+		//改啥配置   直接取浏览器地址做接口地址不就好了
+		//直接使用浏览器的地址
+		// var _href = window.location.href;
+		// app_local_server = _href.split('/Public/Admin/Index/init.html')[0];
+		// console.log(app_local_server);
+
+		// var app_local_info = {app_local_server: app_local_server}
+
+		// crm.post(app_local_server + "/adminApi/index/initJs", {app_local_info: app_local_info}, function(data){
+		// 	console.log(data);
+		// 	// window.location.reload();
+		// 	$('.x-body').html('加载完成,请刷新页面');
+		// });
+		var selects = new Object();
+		var select_mark = '';
+		var select_mark_num = 0;
+		crm.post(crm.api_local + '/setConfig/index', {}, function(data){
+			console.log(data);
+			var html = '';
+			$.each(data.info, function(key, value){
+				if(value.list){
+					html += `
+				<div class="layui-form-item">
+					<label class="layui-form-label">
+						<div class="ell2">` + value.title + `：</div>
+					</label>
+				</div>`;
+					$.each(value.list, function(keyt, valuet){
+						select_mark = '';
+						if(valuet.options){
+							selects['select_mark' + select_mark_num] = valuet.options;
+							select_mark = ' select_mark' + select_mark_num;
+							select_mark_num ++;
+						}
+						html += `
+				<div class="layui-form-item">
+					<label class="layui-form-label">
+						<div class="ell2">` + keyt + `</div>
+					</label>
+					<div class="layui-input-inline flex-default" style="width: 600px;">
+						<input ids="` + keyt + `" data-object_name="` + key + `" type="text" class="layui-input` + select_mark + `" value="` + valuet.value + `" placeholder="` + '请输入 ' + valuet.title + `" autocomplete="off">
+					</div>
+				</div>`;
+					});
+				}else{
+					select_mark = '';
+					if(value.options){
+						selects['select_mark' + select_mark_num] = value.options;
+						select_mark = ' select_mark' + select_mark_num;
+						select_mark_num ++;
+					}
+					html += `
+				<div class="layui-form-item">
+					<label class="layui-form-label">
+						<div class="ell2">` + value.title + `</div>
+					</label>
+					<div class="layui-input-inline flex-default" style="width: 600px;">
+						<input ids="" data-object_name="` + key + `" type="text" class="layui-input` + select_mark + `" value="` + value.value + `" placeholder="` + '请输入 ' + value.title + `" autocomplete="off">
+					</div>
+				</div>`;
+				}
+			});
+			html += `
+				<div class="layui-form-item">
+					<div class="layui-input-block">
+						<button class="layui-btn" lay-submit lay-filter="demo" onclick="doEdit(this);">下一步</button>
+					</div>
+				</div>`;
+
+			$('#setConfig').html(html);
+
+			layui.use(['dropdown'], function(){
+				var dropdown = layui.dropdown;
+				$.each(selects, function(key, val){
+					dropdown.render({
+						elem: '.' + key,
+						data: val,
+						click: function(obj){
+							$('.' + key).val(obj.id);
+						}
+					});
+				});
+			});
+		});
+	}
+
+	function doEdit(obj){
+		$(obj).attr('onclick', '');
+
+		var inputs = $('#setConfig input');
+		var info = new Object();
+		$.each(inputs, function(i, val){
+			if($(this).attr('ids') != ''){
+				if( !info[$(this).attr('data-object_name')] ){
+					info[$(this).attr('data-object_name')] = new Object();
+				}
+				info[$(this).attr('data-object_name')][$(this).attr('ids')] = $(this).val();
+			}else{
+				info[$(this).attr('data-object_name')] = $(this).val();
+			}
+		});
+
+		crm.post(crm.api_local + '/setConfig/edit', {info: info}, function(data){
+			var html = '';
+			if(data.object_name && data.object_name != ''){
+				initObject(data.object_name);
+			}else{
+				html += `
+				<div class="layui-form-item" style="width:700px;">
+					<div class="layui-input-block" style="width:700px; color:red;">
+						点击下一步前往初始化root用户密码，如果已经设置，点击完成前往登录..
+					</div>
+				</div>
+				<div class="layui-form-item">
+					<div class="layui-input-block">
+						<button class="layui-btn" lay-submit lay-filter="demo" onclick="initPassword();">下一步</button>
+						<button class="layui-btn" lay-submit lay-filter="demo" onclick="doLogin();">完成</button>
+					</div>
+				</div>`;
+			}
+			$('#setConfig').html(html);
+		});
+	}
+
+	function initObject(object_name){
+		crm.post(crm.api_local + '/setConfig/initObject', {object_name: object_name}, function(data){
+			var html = '';
+
+			html += `
+				<div class="layui-form-item" style="width:700px;">
+					<div class="layui-input-block" style="width:700px;">
+						` + data.res_message + `
+					</div>
+				</div>`;
+			$('#setConfig').append(html);
+
+			if(data.object_name && data.object_name != ''){
+				initObject(data.object_name);
+			}else{
+				html += `
+				<div class="layui-form-item" style="width:700px;">
+					<div class="layui-input-block" style="width:700px; color:red;">
+						点击下一步前往初始化root用户密码，如果已经设置，点击完成前往登录..
+					</div>
+				</div>
+				<div class="layui-form-item">
+					<div class="layui-input-block">
+						<button class="layui-btn" lay-submit lay-filter="demo" onclick="initPassword();">下一步</button>
+						<button class="layui-btn" lay-submit lay-filter="demo" onclick="doLogin();">完成</button>
+					</div>
+				</div>`;
+				$('#setConfig').append(html);
+			}
+		});
+	}
+
+	function initPassword(){
+		var html = `
+				<div class="layui-form-item">
+					<div class="layui-input-block" style="width:700px;">
+						<div class="ell2">
+							登录用户名: 
+							<span style="color:red;">root</span>
+						</div>
+					</div>
+				</div>
+				<div class="layui-form-item">
+					<label class="layui-form-label">
+						<div class="ell2">请输入密码</div>
+					</label>
+					<div class="layui-input-inline flex-default" style="width: 600px;">
+						<input id="password" data-object_name="" type="text" class="layui-input" value="" placeholder="请输入密码" autocomplete="off">
+					</div>
+				</div>
+				<div class="layui-form-item">
+					<div class="layui-input-block">
+						<button class="layui-btn" lay-submit lay-filter="demo" onclick="doPassword(this);">提交</button>
+					</div>
+				</div>`;
+		$('#setConfig').html(html);
+	}
+
+	function doPassword(obj){
+		$(obj).attr('onclick', '');
+
+		var password = $("#password").val();
+		if(password == ''){
+			alert('密码不可为空！');
+			$(obj).attr('onclick', "doPassword(this);");
+			return false;
+		}
+
+		crm.post(crm.api_local + "/setConfig/initPassword", {password: password}, function(data){
+			var html = `
+				<div class="layui-form-item">
+					<div class="layui-input-block">
+						<button class="layui-btn" lay-submit lay-filter="demo" onclick="doLogin();">去登录</button>
+					</div>
+				</div>`;
+			$('#setConfig').append(html);
+			// doLogin();
+		});
+	}
+
+	function doLogin(){
+		window.location.href = crm.app_local + '/Index/index.html';
+	}
+
+	function initInsert(){
+		var html = `
+				<div class="layui-form-item" style="width:700px;">
+					<div class="layui-input-block" style="width:700px; color:red;">
+						检测到菜单数据异常，请点击下一步载入菜单数据...
+					</div>
+				</div>
+				<div class="layui-form-item">
+					<div class="layui-input-block">
+						<button class="layui-btn" lay-submit lay-filter="demo" onclick="doInsert('DICT_TABLES', this);">下一步</button>
+					</div>
+				</div>`;
+				$('#setConfig').html(html);
+	}
+
+	function doInsert(table_name, obj){
+		$(obj).attr('onclick', '');
+
+		crm.post(crm.api_local + '/setConfig/initInsert', {table_name: table_name}, function(data){
+			var html = '';
+
+			html = `
+				<div class="layui-form-item" style="width:700px;">
+					<div class="layui-input-block" style="width:700px;">
+						` + data.res_message + `
+					</div>
+				</div>`;
+			$('#setConfig').append(html);
+
+			if(data.table_name && data.table_name != ''){
+				doInsert(data.table_name);
+			}else{
+				html = `
+				<div class="layui-form-item" style="width:700px;">
+					<div class="layui-input-block" style="width:700px; color:red;">
+						数据加载已完成，点击下列刷新按钮重载系统...
+					</div>
+				</div>
+				<div class="layui-form-item">
+					<div class="layui-input-block">
+						<button class="layui-btn" lay-submit lay-filter="demo" onclick="reloadParentHref();">刷新</button>
+					</div>
+				</div>`;
+				$('#setConfig').append(html);
+			}
+		});
+	}
+
+	function reloadParentHref(){
+		window.parent.location.reload();
+		
+		var lay_id = $(window.parent.document).find('.layui-this').attr('lay-id');
+		// $(window.parent.document).find('.x-iframe[tab-id=' + lay_id + ']').attr('src', crm.app_local + '/Index/init.html?step=close');
+		$(window.parent.document).find('.layui-tab-title li[lay-id='+lay_id+']').find('.layui-tab-close').click();
+
+	}
+</script>

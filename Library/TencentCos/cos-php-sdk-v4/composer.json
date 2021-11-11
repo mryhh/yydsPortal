@@ -1,0 +1,20 @@
+{
+  "name": "daresheep/cos-php-sdk-v4",
+  "description": "腾讯COS服务composer",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "homepage":"http://www.yitishang.com/",
+  "authors": [
+    {
+      "name": "daresheep",
+      "email": "daresheep@163.com"
+    }
+  ],
+  "require": {
+    "php": ">=5.3.3"
+  },
+  "autoload": {
+    "psr-4": {"qcloudcos\\": "qcloudcos"},
+    "files": ["include.php"]
+  }
+}

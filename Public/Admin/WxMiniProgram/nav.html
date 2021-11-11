@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<script src="../_public/head.js"></script>
+	<style>
+		html, body{
+			background: #f7f7f7;
+		}
+	</style>
+</head>
+<body>
+	<div class="x-body">
+		<div class="mpnav-contain flex-default">
+			<div>
+				<div>
+					<div class="phone-header"></div>
+					<div class="phone-container">
+						<div class="phone-main">
+							<div class="phone-top"></div>
+							<div class="phone-bar" id="phone-bar"></div>
+						</div>
+					</div>
+					<div class="phone-bottom"></div>
+				</div>
+			</div>
+
+			<div class="mpnav-edit" id="mpnav-edit"></div>
+		</div>
+		<div class="mpnav-save">
+			<button type="button" class="layui-btn layui-btn-new layui-btn-lg" onclick="save();">保存</button>
+		</div>
+	</div>
+		
+	<!-- 选择链接 -->
+	<!-- <div id="vip" style="display: none"></div> -->
+
+
+	
+
+
+	<script src="../_public/refresh.js"></script>
+	<script src="../_public/js/pagesData.js"></script>
+	<script src="../_public/js/Sortable/Sortable.js"></script>
+	<script>
+		var table_name = 'WXMP_PAGES';
+		var pages_data = [];
+
+		var list = {
+			color: "#333333",
+			activeColor: "#e34a4e",
+			list: [ 
+				{ appid: '', pagePath: "", icon: crm.default_img, activeIcon: crm.default_img, title: "", value: '' },
+				{ appid: '', pagePath: "", icon: crm.default_img, activeIcon: crm.default_img, title: "", value: '' }
+			]
+		}
+
+		$(function(){
+			nav();
+			// var footer_nav = document.getElementById("footer-nav");
+			new Sortable(footer_nav, {
+				animation: 150,
+				ghostClass: 'blue-background-class'
+			});
+		})
+
+		function nav(){
+			// list = tabList;
+			// crm.post(crm.api_local + "", {}, function(data){
+
+			// })
+			mobile();
+			site();
+		}
+		function mobile(){
+			var html = '';
+			$.each(list.list, function(index, val){
+				html += `
+					<div>
+						<span class="default-icon"><img src="` + val.icon + `" alt=""></span>
+						<span style="color: ` + list.color + `">` + val.title + `</span>
+					</div>
+				`;
+			})
+			$("#phone-bar").empty().append(html);
+		}
+		function site(){
+			var html_edit = '';
+			html_edit += `
+				<div class="mpnav-edit-box">
+					<div class="style-box">
+						<div class="layui-elem-field layui-field-title"><legend>基础设置</legend></div>
+						<div class="mpnav-edit-content">
+
+							<div class="style-box-item item-box-color">
+								<div class="layui-form">
+									<label class="layui-form-label layui-field-title">默认颜色</label>
+									<div class="layui-input-block">
+										<div class="layui-input-inline w12"> 
+											<input type="text" value="` + list.color + `" placeholder="请选择默认颜色" class="layui-input color-picker-input" data-name="color">
+										</div>
+										<div class="layui-inline">
+											<div class="color-picker-0"></div>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div class="style-box-item item-box-color">
+								<div class="layui-form">
+									<label class="layui-form-label layui-field-title">选中颜色</label>
+									<div class="layui-input-block">
+										<div class="layui-input-inline w12">
+											<input type="text" value="` + list.activeColor + `" placeholder="请选择选中颜色" class="layui-input color-picker-input" data-name="activeColor">
+											</div>
+										<div class="layui-inline">
+											<div class="color-picker-1"></div>
+										</div>
+									</div>
+								</div>
+							</div>
+
+						</div>
+					</div>
+				</div>
+
+				<div class="mpnav-edit-box mpnav-edit-box2">
+					<div class="style-box">
+						<div class="layui-elem-field layui-field-title"><legend>图标设置</legend></div>
+						<div class="style-layui-tips">
+							<p>上传图标的建议尺寸：75x75像素</p>
+							<p>上传图标的建议格式：png</p>
+							<p>最少保留2个导航，最多保留5个导航</p>
+						</div>
+						<div class="mpnav-edit-content" id="footer_nav">`;
+						$.each(list.list, function(index, val){
+							html_edit += `
+							<div class="re style-box-item flex-default">
+								<div class="mpnav-icons">
+									<div>
+										<div class="default-icon upload-0-` + index + `">
+											<img src="` + val.icon + `" alt="">
+											<p>修改图片</p>
+										</div>
+										<p>默认显示</p>
+									</div>
+									<div>
+										<div class="default-icon upload-1-` + index + `">
+											<img src="` + val.activeIcon + `" alt="">
+											<p>修改图片</p>
+										</div>
+										<p>高亮选中</p>
+									</div>
+								</div>
+								<div class="mpnav-input">
+									<div class="layui-form">
+										<div class="layui-form-item">
+											<label class="layui-form-label">标题</label>
+											<div class="layui-input-block">
+												<input type="text" name="title" lay-verify="text" autocomplete="off" placeholder="请输入标题" class="layui-input" value="` + val.title + `" oninput="inputOn(this);">
+											</div>
+										</div>
+										<div class="layui-form-item layui-form-url">
+											<label class="layui-form-label">链接</label>
+											<div class="layui-input-block">
+												<input type="text" name="pagePath" lay-verify="pagePath" autocomplete="off" placeholder="请输入链接" class="layui-input" value="` + (val.value ? val.value : ( val.pagePath ? (crm.other_app + val.pagePath) : '')) + `" data-appid="` + val.appid + `" data-path="` + val.pagePath + `" onFocus="inputFocus(this, ` + index + `);">
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="drag-hidden">
+									<div class="drag-close" onclick="del(` + index + `);"><img src="../_public/images/icon-close.png" alt="删除"></div>
+								</div>
+							</div>
+							`;
+						})
+						html_edit += `	
+						</div>
+
+						<button type="button" class="layui-btn layui-btn-addnav" onclick="add();"><i class="layui-icon layui-icon-add-1"></i> 新增一个导航</button>
+					</div>
+				</div>
+			`;
+			$("#mpnav-edit").empty().append(html_edit);
+			
+
+			layui.use(['element', 'colorpicker'], function(){
+				var $ = layui.$,
+					colorpicker = layui.colorpicker;
+				for(var i = 0; i < $(".item-box-color").length; i++){
+					colorpicker.render({
+						elem: '.color-picker-' + i,
+						color: $('.color-picker-' + i).parents('.item-box-color').find('.color-picker-input').val(),
+						change: function(color){
+							$(this.elem).parents('.item-box-color').find('.color-picker-input').val(color)
+							console.log(list)
+							for(k in list){
+								if( k == $(this.elem).parents('.item-box-color').find('.color-picker-input').attr('data-name') ){
+									list[k] = color;
+								}
+							}
+							mobile();
+						}
+					});
+				}
+
+				// 上传图片
+				for(var i = 0; i < 2; i++){
+					for(var j = 0; j < list.list.length; j ++){
+						upload(i, j);
+					}
+				}
+			})
+		}
+		function vip(obj, index){
+			if(pages_data.length < 1){
+				crm.post(crm.api_local + '/Portal/index', {table_name: table_name}, function(data) {
+					pages_data = data.list;
+					var html = '';
+					layui.use(['element', 'form'], function(){
+						var $ = layui.jquery,
+							element = layui.element,
+							form = layui.form;
+
+						html += `
+							<div class="layui-tab layui-tab-brief" lay-filter="">
+								<ul class="layui-tab-title">
+									<li class="layui-this">会员中心</li>
+									<li>自定义小程序</li>
+								</ul>
+								<div class="layui-tab-content" id="vip_page">
+									<div class="layui-tab-item layui-show">
+										<div class="table-demo">
+											<div class="layui-table">
+												<div class="flex-center vip_page_tr">
+													<div class="flex-1">页面名称</div>
+													<div class="flex-1">小程序页面</div>
+												</div>`;
+									$.each(pages_data, function(i, val){
+										html += `
+												<div class="flex-center vip_page_tr vip_page_tr_` + i + `">
+													<div class="flex-1">` + val.title + `</div>
+													<div class="flex-1">
+														<div class="layui-form">
+															<input type="radio" name="page_sel" value="` + val.title + `" title="" lay-filter="page" data-name="title" data-path="` + val.pages + `" data-appid="` + val.app_id + `" data-id="` + val.id + `" data-title="` + val.title + `">
+														</div>
+													</div>
+												</div>
+										`;
+									})
+									html += `
+											</div>
+										</div>
+									</div>
+									<div class="layui-tab-item">
+										<div class="layui-form vip-other-form">
+											<div class="layui-form-item">
+												<label class="layui-form-label">小程序链接</label>
+												<div class="layui-input-block">
+													<input type="text" name="appid" lay-verify="appid" autocomplete="off" placeholder="请输入小程序appid" class="layui-input" id="other_appid">
+												</div>
+											</div>
+											<div class="layui-form-item">
+												<div class="layui-input-block">
+													<input type="text" name="path" lay-verify="path" autocomplete="off" placeholder="请输入小程序路径" class="layui-input" id="other_path">
+												</div>
+											</div>
+											<div class="layui-form-item">
+												<div class="layui-input-block">
+													<button type="reset" class="layui-btn layui-btn-primary" onclick="layer.closeAll();">取消</button>
+													<button type="submit" class="layui-btn layui-btn-new" lay-submit="" lay-filter="submit2">提交</button>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div> 
+						`;
+
+						$("#vip").empty().append(html);
+						form.render();
+
+						pages_data.map(function(p_v, p_i) {
+							if(text_v == p_v.title){
+								console.log(p_i)
+								$('.vip_page_tr_' + p_i).find('input').click();
+							} else {
+								if(in_path.indexOf(crm.other_app) != -1){
+									$("#other_appid").val(in_appid);
+									$("#other_path").val(in_path);
+								}
+							}
+						})
+					})
+				});
+			}
+
+			layui.use(['element', 'form'], function(){
+				var $ = layui.jquery,
+					element = layui.element,
+					form = layui.form;
+				form.render();
+			});
+		}
+		// 上传图片
+		function upload(i, index){
+			var param_upload = {'path': 'pages', 'id': 'new'};
+
+			crm._upload('.upload-' + i + '-' + index, param_upload, function(that, res){
+				var imgSrc = crm.domain_name + res.data.infos.file.src;
+				$(that.elem.selector).find('img').attr('src', imgSrc);
+				if(i == 0){
+					list.list[index].icon = imgSrc;
+				} else if(i == 1){
+					list.list[index].activeIcon = imgSrc;
+				}
+				mobile();
+			})
+		}
+		function inputOn(obj){
+			var index = $(obj).parents(".style-box-item").index();
+			list.list[index].title = $(obj).val();
+			mobile();
+			// mobile();
+		}
+		function inputFocus(obj, i){
+			var current = 0;
+			window.parent._admin = obj;
+			var in_path = $(obj).attr('data-path');
+			if(in_path.indexOf(crm.app_product_ig) != -1){
+				current = 1;
+			} else if(in_path.indexOf(crm.app_coupon) != -1){
+				current = 2;
+			} else if(in_path.indexOf(crm.other_app) != -1){
+				current = 3;
+			}
+			layer.open({
+				type: 2,
+				title: '请输入链接',
+				content: 'model.html?table_name=' + table_name + '&current=' + current,
+				area: [($(window).width() * 0.8) + 'px', ($(window).height() - 80) + 'px'],
+				shade: 0.5,
+				shadeClose: true,
+				btn: ['提交', '清空'],
+				yes: function (index, layero) {
+					var iframeWin = window["layui-layer-iframe" + index];
+					var res = iframeWin.callbackdata();
+					console.log(res)
+					if(!res.p_val || !res.p_appid || !res.p_path){
+						if(!$(obj).val()){
+							layer.msg('请先选择完整~', {icon: 2});
+							return false;
+						}
+					} else {
+						list.list[i].value = res.p_val;
+						list.list[i].appid = res.p_appid;
+						list.list[i].pagePath = res.p_path;
+						$(obj).val(res.p_val);
+						$(obj).attr("data-appid", res.p_appid);
+						$(obj).attr("data-path", res.p_path);
+					}
+
+					layer.closeAll('iframe'); 
+				},
+				btn2: function(index, layero) {
+					layer.confirm('确定清空该链接吗？', { title: '温馨提示', }, function(index_con){
+						list.list[i].value = '';
+						list.list[i].appid = '';
+						list.list[i].pagePath = '';
+						$(obj).val('');
+						$(obj).attr("data-appid", '');
+						$(obj).attr("data-path", '');
+						layer.closeAll(); 
+					})
+				},
+				end: function(){
+					
+				}
+			});
+		}
+		// 新增
+		function add(){
+			var default_li = { appid: '', pagePath: "", icon: crm.default_img, activeIcon: crm.default_img, title: "", value: '' };
+			if(list.list.length > 4){
+				layui.use('layer', function(){
+					layer.msg("最多保留5个导航")
+				});
+				return false;
+			}
+			list.list.push(default_li);
+			mobile();
+			site();
+		}
+		// 删除
+		function del(i){
+			layui.use('layer', function(){
+				layer.confirm('确定删除?', { title: '温馨提示', }, function(index){
+					if(list.list.length < 3){
+						layer.msg('请至少保留2项~');
+						return false;
+					}
+					list.list.splice(i, 1);
+					console.log(list.list)
+					mobile();
+					site();
+					layer.close(index);
+				})
+			})
+		}
+		// 保存
+		function save(){
+			console.log(list)
+		}
+	</script>
+</body>
+</html>
+

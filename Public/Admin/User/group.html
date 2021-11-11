@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>用户组管理</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<div class="table-demo">
+			<button class="layui-btn layui-btn-new add-btn">新增</button>
+
+			<table class="layui-table" id="user_list" lay-filter="user_list"></table>
+			<script type="text/html" id="barDemo">
+				<div class="layui-btn-container">
+					<a class="layui-btn layui-btn-sm" lay-event="submit">提交</a>
+					<a class="layui-btn layui-btn-sm layui-btn-normal" lay-event="groupUser">编辑用户</a>
+					<a class="layui-btn layui-btn-sm layui-btn-danger" lay-event="groupAuthority">编辑权限</a>
+				</div>
+			</script>
+		</div>
+	</div>
+</body>
+
+<script src="../_public/refresh.js"></script>
+<script type="text/javascript">
+	var list = [];
+	var add_i = 0;
+	userList();
+
+	function userList(){
+
+		crm.post(crm.api_local + "/user/group", {}, function(data){
+			list = data.list;
+			var cols = [[
+				{ field: 'id', title: 'ID', /*sort: true,*/ width: 80, },
+				{ field: 'title', title: '组名', /*edit: 'text',*/ 
+					templet: function(d){
+						return `<input class="layui-input" type="text" name="" value="` + d.title + `" oninput="editInput(event, this, '` + d.id + `', 'title');">`;
+					}, 
+				},
+				{ field: 'user_list_str', title: '用户', /*sort: true,*/ },
+				{ field: 'parent_id', title: '上级ID', /*sort: true,*/ /*edit: 'text',*/ 
+					templet: function(d){
+						return `<input class="layui-input" type="text" name="" value="` + d.parent_id + `" oninput="editInput(event, this, '` + d.id + `', 'parent_id');">`;
+					}, 
+				},
+				{ title: '操作', toolbar: '#barDemo', width: 260, }
+			]];
+			crm._table('#user_list', { list, cols }, function(table, form){
+				//监听单元格
+				form.on('edit(user_list)', function(obj){
+					console.log(obj)
+				});
+				//监听行工具事件
+				table.on('tool(user_list)', function(obj){
+					var data = obj.data;
+					console.log(data)
+					if(obj.event === 'submit'){
+						var _param = {
+							id: (data.id ? data.id : 'new'),
+							title: data.title,
+							parent_id: data.parent_id,
+						};
+						console.log(_param);
+
+						crm.post(crm.api_local + "/user/editGroup", _param, function(data){
+							console.log(data);
+							obj.tr.find('.font-red').removeClass('font-red');
+						});
+					} else if(obj.event === 'groupUser'){
+						xadmin.open('编辑用户', crm.app_local + `/User/groupUser.html?id=` + data.id)
+					} else if(obj.event === 'groupAuthority'){
+						xadmin.open('编辑权限', crm.app_local + `/User/groupAuthority.html?id=` + data.id)
+					}
+				});
+				$(".add-btn").click(function(){
+					var oldData = table.cache["user_list"]; //获取现有数据
+					var newData = {
+						id: "",
+						title: "新分组",
+						user_list_str: "",
+						parent_id: "0",
+					};
+					oldData.unshift(newData)
+					table.reload("user_list", {
+						data: oldData,
+					})
+				})
+			})
+		});
+	}
+	// 编辑
+	function editInput(e, obj, id, type){
+		$(obj).addClass('font-red');
+		for(var i = 0; i < list.length; i++){
+			if(list[i].id == id){
+				if(type == 'parent_id'){
+					list[i].parent_id = e.target.value;
+				} else if(type == 'title'){
+					list[i].title = e.target.value;
+				}
+			}
+		}
+	}
+</script>
+</html>

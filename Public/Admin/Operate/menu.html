@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>编辑一级菜单</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<button class="layui-btn layui-btn-new add-btn" onclick="xadmin.open('一级菜单编辑', crm.app_local + '/Operate/menuOne.html')">新增一级菜单</button>
+
+		<div class="table-demo">
+			<table class="layui-table" id="menu_list" lay-filter="menu_list"></table>
+
+			<script type="text/html" id="barDemo">
+				<a class="layui-btn layui-btn-sm" lay-event="submit">提交</a>
+			</script>
+		</div>
+	</div>
+</body>
+
+<script src="../_public/refresh.js"></script>
+<script type="text/javascript">
+	var list = [];
+	menuList();
+
+	function menuList(){
+		crm.post(crm.api_local + "/operate/menu", {}, function(data){
+			var datas = data;
+			list = data.list;
+			var cols = [[
+				{ field: 'seq', title: '排序', /*sort: true,*/ width: 90, 
+					templet: function(d){
+						return `<input class="layui-input" type="text" name="" name="" value="` + d.seq + `" oninput="editInput(event, this, '` + d.html_url + `', 'seq');">`;
+					}, 
+				},
+				{ field: 'id', title: 'ID', /*sort: true,*/ width: 70, },
+				{ field: 'title', title: '菜单标题', /*sort: true,*/ width: 150, /*edit: 'text',*/ 
+					templet: function(d){
+						return `<input class="layui-input" type="text" name="" value="` + d.title + `" oninput="editInput(event, this, '` + d.html_url + `', 'title');">`;
+					}, 
+				},
+				// { field: 'icon', title: '菜单图标', width: 100,  /*edit: 'text',*/
+				// 	templet: function(d){
+				// 		return `<input class="layui-input" type="text" name="" value="` + d.icon + `" oninput="editInput(event, this, '` + d.html_url + `', 'icon');">`;
+				// 	}, 
+				// },
+				{ field: 'html_url', title: '页面地址', /*sort: true,*/ },
+				{ field: 'operate_title', title: '操作标题', /*sort: true,*/ },
+				{ field: 'parent_id', title: '一级菜单', /*sort: true,*/ width: 200, 
+					templet: function(d){
+						var _html_select = '';
+						_html_select += `
+							<select class="layui-input layui-input-28" lay-filter="editStateS" data-url="` + d.html_url + `">
+								<option value="">--请选择--</option>`;
+						if(datas.parent){
+							$.each(datas.parent, function(keyt, valuet){
+								var _selected = '';
+								if(valuet.id == d.parent_id){
+									_selected = ' selected="selected"';
+								}
+								_html_select += `
+								<option` + _selected + ` value="` + valuet.id + `">` + valuet.title + `</option>`;
+							});
+						}
+						_html_select += `
+							</select>`;
+						return _html_select;
+					}, 
+				},
+				{ field: 'show_type', title: '新窗口打开', width:100,
+					templet: function(d){
+						var checked = (d.show_type == '' || d.show_type == '_self') ? '' : 'checked';
+						return `<input type="checkbox" name="" value="` + d.id + `" lay-skin="switch" lay-filter="switch" data-name="show_type" lay-text="是|否" ` + checked + `>`;
+					}, 
+				},
+				{ field: 'isactive', title: '可用', width: 80, /*sort: true,*/
+					templet: function(d){
+						var checked = (d.isactive == 'Y' ? 'checked' : '');
+						var disabled = ( d.id ? '' : 'disabled="disabled"');
+						return `<input type="checkbox" name="" value="` + d.id + `" lay-skin="switch" lay-filter="switch" data-name="isactive" lay-text="是|否" ` + checked + ` ` + disabled + `>`;
+					}, 
+				},
+				{ title: '操作', toolbar: '#barDemo', width: 90, }
+			]]
+
+			crm._table('#menu_list', { list, cols }, function(table, form){
+				//监听单元格
+				table.on('edit(menu_list)', function(obj){
+					console.log(obj)
+				});
+				//监听下拉框
+				form.on('select(editStateS)', function (obj) {
+					var html_url = $(obj.elem).attr("data-url"); 
+					for (i = 0; i < data.list.length; i++) {
+						if (data.list[i].html_url == html_url) {
+							data.list[i].parent_id = obj.value;
+						}
+					}
+					obj.othis.parents('tr').find('.layui-unselect').addClass('font-red');
+				})
+				//开关
+				form.on('switch(switch)', function(obj){
+					var key = obj.elem.dataset.name;
+					var _switch = obj.elem.checked ? 'Y' : 'N';
+					for(var i = 0; i < list.length; i++){
+						if(list[i].id == obj.value){
+							if(key == 'show_type'){
+								_switch = obj.elem.checked ? '_blank' : '_self';
+							}
+							list[i][key] = _switch;
+						}
+					}
+				});
+				//提交
+				table.on('tool(menu_list)', function(obj){
+					var data = obj.data;
+					for(var i = 0; i < list.length; i++){
+						if(list[i].html_url == data.html_url){
+							data = list[i];
+						}
+					}
+
+					if(obj.event === 'submit'){	
+						console.log(data)
+						var _param = {
+							seq: data.seq,
+							id: (data.id ? data.id : 'new'),
+							title: data.title,
+							icon: data.icon,
+							parent_id: (data.parent_id ? data.parent_id : '0'),
+							admin_operate_id: data.admin_operate_id,
+							isactive: data.isactive,
+							show_type: data.show_type,
+						};
+						crm.post(crm.api_local + "/operate/editMenu", _param, function(data){ 
+							console.log(data)
+							obj.tr.find('.font-red').removeClass('font-red');
+							menuList();
+						});
+					}
+				});
+			})
+		});
+	}
+	// 编辑
+	function editInput(e, obj, id, type){
+		$(obj).addClass('font-red');
+		for(var i = 0; i < list.length; i++){
+			if(list[i].html_url == id){
+				list[i][type] = e.target.value;
+			}
+		}
+		console.log(list)
+	}
+</script>
+</html>

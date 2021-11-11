@@ -1,0 +1,3160 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>小程序页面配置</title>
+	<script src="../_public/head.js"></script>
+	<!-- <script src="../_public/js/Sortable/Sortable.js"></script> -->
+	<link rel="stylesheet" type="text/css" href="../_public/css/font2/iconfont.css">
+	<style>
+		html, body{
+			background: #f7f7f7;
+		}
+	</style>
+</head>
+<body>
+	<div class="x-body">
+		<div class="flex-justify">
+			<div onclick="goback();" class="go-back">< 返回小程序页面列表</div>
+			<div class="pages-btns-n">
+				<button type="button" class="layui-btn layui-btn-sm layui-btn-primary text-right" onclick="clearPage();">清空</button>
+				<button type="button" class="layui-btn layui-btn-sm text-right" onclick="save('preview');">预览</button>
+				<button type="button" class="layui-btn layui-btn-sm layui-btn-new text-right" onclick="save('push')">发布</button>
+				<button type="button" class="layui-btn layui-btn-sm layui-btn-normal btn-code" onclick="code();">查看小程序码</button>
+				<div id="code-img"></div>
+			</div>
+		</div>
+		<div id="pages"></div>
+	</div>
+
+	<!-- 选择链接 -->
+	<div id="vip" style="display: none"></div>
+
+	<!-- 绘制热区 -->
+	<div id="hot-region" style="display: none"></div>
+
+	<script src="../_public/refresh.js"></script>
+	<script type="text/javascript">
+		var _params = {};
+		var table_name = 'WXMP_PAGES';
+		var pages_data = []; //小程序页面路径
+		if(window.location.href.indexOf('?') != -1){
+			_params = crm.getParam({wxmp_pages_id: ''});
+		}
+		var codeImg = '';
+		var vip_grade = []; //会员等级
+		var red_lottery = []; //抽奖活动
+		var wheel_red_lottery = []; 
+		var carveup_lottery = []; //团购活动
+
+		const static_data = [
+			{ 
+				tag: '头部卡片', 
+				type: 'headcard', 
+			}, { 
+				tag: '图片广告', 
+				type: 'pic', 
+			}, { 
+				tag: '热区切图', 
+				type: 'cutaway', 
+			}, { 
+				tag: '魔方', 
+				type: 'cube', 
+			}, { 
+				tag: '导航', 
+				type: 'nav', 
+			}, { 
+				tag: '表单', 
+				type: 'form', 
+			}, { 
+				tag: '积分兑券', 
+				type: 'pcoupon',  
+			}, { 
+				tag: '数据列表', 
+				type: 'list',  
+			}, { 
+				tag: '公告', 
+				type: 'notice', 
+			}, { 
+				tag: '辅助空白', 
+				type: 'blank', 
+			}, { 
+				tag: '红包组件', 
+				type: 'redpaper', 
+			}, { 
+				tag: '好友瓜分', 
+				type: 'carveup', 
+			}, 
+		];
+		var dict_data = [];
+
+		var list = [];
+
+		var hot_i = 0;
+		var hot_arr = []; //热区
+		var assembly_id = 0;
+
+		var drag_dict_i = 0;
+
+		var page = [];
+		var param_upload = {'path': 'pages', 'id': 'new'};
+
+		var colorelemArr = [
+			{ key: '.color-picker-' },
+			{ key: '.bgcolor-picker-' },
+		];
+
+		$(function(){
+			_init(); // 数据字典
+
+			// $(".btn-code").mouseover(function(){
+			// 	$("#code-img").show();
+			// }).mouseout(function(){
+			// 	$("#code-img").hide();
+			// });
+		})
+		function code(){
+			$("#code-img").toggle();
+		}
+
+		function _init(assembly_type, assembly_id){
+			crm.post(crm.api_local + "/dict/tables", {}, function(data){
+				dict_data = data;
+					pages();
+				if(_params.wxmp_pages_id){
+					page_edit();
+				} 
+			});
+		}
+		function dict_one(table_name, assembly_id, index, key){
+			crm.post(crm.api_local + "/dict/columns", { table_name }, function(data){
+				var html = '';
+				var select_info = '';
+				var $div = '';
+				select_info = page[assembly_id][key][index];
+				$div = $(".dict-table-" + key + '-' + assembly_id + '-' + index);
+
+				html += `
+					<select name="" lay-filter="dict-table" data-index="` + index + `" type="` + key + `" lay-search>
+						<option value="">不显示</option>`;
+				$.each(data, function(d_i, d_val){
+					html += `
+						<option value="` + d_val.id + `" data-title="` + d_val.title + `" ` + ((d_val.title == select_info.dict_text && select_info.dict_id) ? 'selected' : '') + `>` + d_val.title + `</option>`;
+				})
+				html += `
+					</select>`;
+
+				$div.empty().append(html).show();
+				layui.use('form', function(){
+					var form = layui.form;
+					form.render('select');
+				});
+			});
+		}
+		function pages(){
+			var html = '';
+			html += `
+				<div id="cloning" class="flex-center-between design-container" style="height: ` + ($(window).height() - 80) + `px;">
+					<div class="flex-1 design-add">
+						<div class="design-editor">
+							<div class="design-title">拖拽使用</div>
+							<div class="flex-wrap design-grouped-list">`;
+				$.each(static_data, function(i, val){
+					html += `
+								<div class="design-grouped-btn">
+									<div class="design-grouped-icon" draggable="true" ondragstart="drag(event);" id="drag-` + val.type + `">
+										<span class="iconfont icon-` + val.type + `"></span>
+										<p>` + val.tag + `</p>
+									</div>
+								</div>`;
+				})
+				html += `		<div id="drag_demo" style="display:none;"></div>
+							</div>
+						</div>
+					</div>
+
+					<div class="flex-1 design-preview-box">
+						<div class="design-preview">
+							<div class="design-config-preview">
+								<div class="design-preview-title">
+									<p>` + (_params.title ? _params.title : '标题') + `<img src="../_public/images/config-editor.png" alt=""></p>
+								</div>
+							</div>
+							<div class="design-preview-sortable" id="pro_box" ondrop="drop(event);" ondragover="allowDrop(event);">
+								<div name="pro-div"></div>
+							</div>
+						</div>
+					</div>
+
+					<div class="flex-1 design-write-box">
+						<div id="style-box" class="style-box"></div>
+					</div>
+				</div>`;
+
+			$("#pages").empty().append(html);
+		}
+		function page_edit(){
+			crm.post(crm.api_local + '/WxMiniProgram/pagesContent', { wxmp_pages_id: _params.wxmp_pages_id }, function(data) {
+				console.log(data)
+				if(data.list){
+					assembly_id = data.list.length;
+
+					var codeImg_html = `
+						<img src="` + crm.domain_name + data.page_code.wxmp_code + `" alt="">
+					`;
+					$("#code-img").append(codeImg_html);
+					
+					for(var i = 0; i < data.list.length; i++){
+						page[i] = data.list[i].content;
+						page[i].id = data.list[i].id;
+						page[i].assembly_id = i;
+
+						var	addC = 'drag-re ' + page[i].type,
+							html_b = `<div class="style-box-group style-box-` + i + `"></div>`;
+						var newItem = document.getElementById('drag_demo').cloneNode(true);
+						newItem.id = 'pro_div_' + i;
+						newItem.setAttribute('name', "pro-div");
+						$("#pro_box").append(newItem);
+						$("#pro_div_" + i).css({
+							'display': 'block',
+							// 'border': '0.5px dashed #f7f7f7'
+						})
+
+						$('#style-box').append(html_b);
+
+						pageHtml(page[i].tag, i);
+						rightHtml(page[i].tag, i);
+						$("#pro_div_"+ i).addClass(addC).attr({
+							'data-tag': page[i].tag,
+						});
+						if( page[i].tag == '头部卡片' || page[i].tag == '魔方'){
+							var key = 'list';
+							for(var p_i = 0; p_i < page[i][key].length; p_i ++){
+								if(page[i][key][p_i].dict_id){
+									dict_one(page[i][key][p_i].dict_name, page[i].assembly_id, p_i, key);
+								} 
+							}
+						}
+						if( page[i].infoList && page[i].infoList.length > 0){
+							var key = 'infoList';
+							for(var p_i = 0; p_i < page[i][key].length; p_i ++){
+								if(page[i][key][p_i].dict_id){
+									dict_one(page[i][key][p_i].dict_name, page[i].assembly_id, p_i, key);
+								} 
+							}
+						}
+
+						var j = i;
+						$("#pro_div_" + j).click(function() {
+							view_style_div($(this).attr('data-tag'), this);  
+						});
+					}
+					
+				}
+			});
+		}
+		//拖拽部分
+		function allowDrop(ev){
+			ev.preventDefault();ev.stopPropagation();
+		}
+		function drag(ev){
+			ev.dataTransfer.setData("assembly_type", ev.target.innerText || ev.target.alt);
+		}
+		//拖拽区域内放下动作
+		async function drop(ev){ 
+			var static_info = [
+				{ 
+					id: 'new',
+					tag: '头部卡片', 
+					type: 'headcard', 
+					// bg: crm.app_local + '/_public/images/pic-default.jpg', 
+					// code: '../_public/images/icon_code.png',
+					logoImg: crm.app_local + '/_public/images/head-card-avator.png',
+					bgList: [ { img: crm.app_local + '/_public/images/pic-default.jpg', } ],
+					appid: '',
+					value: '', 
+					path: '',
+					list: [
+						{ siteID: '1', type: 'vipGrad', name: '卡等级', dict_id: '', dict_text: '', dict_name: '', left: '20%', top: '20%', size: 14, color: '#000000', bgcolor: "#ffffff", bgcolor_on: false, title: '', },
+						{ siteID: '2', type: 'logo', name: '会员logo', dict_id: '', dict_text: '', dict_name: '', value: '', img: crm.app_local + '/_public/images/head-card-avator.png',  left: '3%', top: '40%', width: '', height: '', color: '#000000', bgcolor: "#ffffff", bgcolor_on: false, title: '', },
+						{ siteID: '3', type: 'cardnoImg', name: '二维码图', dict_id: '', dict_text: '', dict_name: '', left: '60%', top: '50%', width: '280', height: '280', color: '#000000', bgcolor: "#ffffff", bgcolor_on: false, title: '', },  
+					],
+				}, { 
+					id: 'new',
+					tag: '图片广告', 
+					type: 'pic', 
+					autoplay: true,
+					defaultgap: 3, 
+					list: [ { img: crm.default_img, title: '', path: '', appid: '', value: '', seq: 1, } ], 
+				}, { 
+					id: 'new',
+					tag: '热区切图', 
+					type: 'cutaway', 
+					bgList: [ { img: crm.app_local + '/_public/images/pic-default.jpg',} ],
+					list: [],
+				}, { 
+					id: 'new',
+					tag: '魔方', 
+					type: 'cube', 
+					titlecolor: '#333333', 
+					titlesize: 12,
+					paramcolor: '#000000',
+					paramsize: 12,
+					list: [ { img: crm.default_img, title: '', path: '', appid: '', value: '', dict_id: '', dict_text: '', dict_name: '', } ],
+				}, { 
+					id: 'new',
+					tag: '导航', 
+					type: 'nav', 
+					style: 1,
+					right_icon: true,
+					color: '#333333',
+					size: 14,
+					list: [ { img: crm.default_img, title: '', path: '', appid: '', value: '', } ], 
+				}, { 
+					id: 'new',
+					tag: '表单', 
+					type: 'form', 
+					style: 1,
+					btn_text: '保存',
+					btn_bgcolor: '#e34a4e',
+					btn_color: '#ffffff',
+					btn_size: 14,
+					textsize: 14,
+					textcolor: '#333333',
+					paramcolor: '#333333',
+					gift_num: '', //赠送次数
+					gift_Ignum: '', //赠送积分
+					gift_coupon: '', //赠送优惠券ID
+					list: [ { title: '标题', type: 'input', dict_id: '', dict_text: '', dict_name: '', edit: 'Y', seq: 1, } ],
+				}, 
+				{ 
+					id: 'new',
+					tag: '积分兑券', 
+					type: 'pcoupon',  
+					style: 1,
+					bgList: [ { img: crm.app_local + '/_public/images/coupon.png',} ],
+					defaultgap: 20, 
+					coupon_name: '券名称', 
+					coupon_name_color: '#333', 
+					coupon_name_size: 14,
+					coupon_endtime: '截止日期 2020-12-31', 
+					coupon_endtime_color: '#999999', 
+					coupon_endtime_size: 12, 
+					coupon_num: '300', 
+					coupon_num_color: '#ff0000',
+					coupon_num_size: 18, 
+					coupon_btn: '去兑换', 
+					coupon_btn_bgcolor: '#ff0000',
+					coupon_btn_color: '#ffffff',
+					coupon_btn_size: 12, 
+				}, 
+				{ 
+					id: 'new',
+					tag: '数据列表', 
+					type: 'list', 
+					defaultgap: 20, 
+					bgList: [ { img: crm.default_img, } ],
+					infoList: [
+						{ condition1: '', condition2: '', dict_id: '', dict_text: '', dict_name: '', },
+					],
+					list: [  
+						{ color: '#333333', size: 12, dict_id: '', dict_text: '', dict_name: '', left: '10%', top: '15%', width: '80%', }, 
+					],
+				}, 
+				{ 
+					id: 'new',
+					tag: '公告', 
+					type: 'notice', 
+					content: '',
+					textcolor: "#333333",
+					textsize: 12,
+					bgcolor: "#ffffff",
+					scroll: false,
+				}, { 
+					id: 'new',
+					tag: '辅助空白', 
+					type: 'blank', 
+					defaultgap: 10, 
+					bgcolor: '#f4f4f4',
+				}, 
+				{ 
+					id: 'new',
+					tag: '红包组件', 
+					type: 'redpaper', 
+					red_type: 'default',
+					bgList: [ { img: crm.default_img,} ],
+					left: '15%',
+					right: '15%',
+					top: '35%',
+					bottom: '35%',
+					activity_id: '',
+					audio: '',
+					wheel_left: '15%', 
+					wheel_right: '15%', 
+					wheel_top: '20%',
+					list: [ { img: crm.default_img, }, { img: crm.default_img, }, { img: crm.default_img, } ], 
+					coupon: [ {id: '', title: '',}, ],
+				}, 
+				{ 
+					id: 'new',
+					tag: '好友瓜分', 
+					type: 'carveup', 
+					bgList: [ { img: crm.default_img, } ],
+					activity_id: '',
+					list: [  
+						{ name: '参与人数', color: '#333333', size: 12, left: '10%', right: '10%', top: '30%', }, 
+						{ name: '好友瓜分组', color: '#333333', size: 10, left: '10%', right: '10%', top: '35%', }, 
+						{ name: '剩余时间', color: '#333333', size: 12, left: '10%', right: '10%', top: '50%', }, 
+						{ name: '邀请按钮', color: '#333333', size: 16, left: '10%', right: '10%', top: '80%', bottom: '10%', }, 
+					],
+				},
+			];
+
+			ev.preventDefault();
+			ev.stopPropagation();
+			// var offsetTop_mouse = ev.clientY - document.getElementById('pro_box').getBoundingClientRect().top;
+			var offsetTop_mouse = ev.clientY - document.getElementById('pro_box').getBoundingClientRect().top + $('.design-preview-sortable').scrollTop();
+			var assembly_divs = document.getElementsByName('pro-div');
+			var create_num = 0;
+			if(assembly_divs.length > 0){
+				for (var i = 0; i < assembly_divs.length; i++) {
+					if(assembly_divs[i].offsetTop > offsetTop_mouse){
+						var newItem = document.getElementById('drag_demo').cloneNode(true);
+						newItem.id = 'pro_div_' + assembly_id;
+						newItem.setAttribute('name', "pro-div");
+						document.getElementById('pro_box').insertBefore(newItem, assembly_divs[i]);
+						create_num ++;
+						break;
+					}
+				}
+			}
+			//判断加载组件
+			var assembly_type = ev.dataTransfer.getData("assembly_type"),
+				addC = 'drag-re ',
+				html_b = `<div class="style-box-group style-box-` + assembly_id + `"></div>`;
+			if(create_num < 1){
+				var newItem = document.getElementById('drag_demo').cloneNode(true);
+				newItem.id = 'pro_div_' + assembly_id;
+				newItem.setAttribute('name', "pro-div");
+				document.getElementById('pro_box').appendChild(newItem);
+			}
+			document.getElementById('pro_div_' + assembly_id).style.display = "block";
+			document.getElementById('pro_div_' + assembly_id).onclick = function(){
+				view_style_div(assembly_type, this);  
+			};
+
+			$('#style-box').append(html_b);
+
+			page[assembly_id] = { assembly_id: assembly_id };
+			for (var i = 0; i < static_data.length; i++) {
+				if(assembly_type == static_data[i].tag){
+					addC += 'drag-' + static_data[i].type;
+
+					for(var key in static_info[i]){
+						page[assembly_id][key] = static_info[i][key];
+					}
+				}
+			}
+
+			// 中间页面
+			pageHtml(assembly_type, assembly_id);
+			// 右侧页面
+			rightHtml(assembly_type, assembly_id);
+
+			$("#pro_div_"+ assembly_id).addClass(addC).attr({
+				'data-tag': assembly_type,
+			});
+			document.getElementById('pro_div_' + assembly_id).click();
+			assembly_id ++;
+		}
+		// 中间页面
+		function pageHtml(assembly_type, assembly_id){
+			var html = '';
+
+			if(assembly_type == '头部卡片'){
+				html += `
+					<div class="head-card-bg"><img src="` + (page[assembly_id].bgList[0].img) + `"></div>
+					<div class="head-card">`;
+					html += `
+						<div class="user-info">`;
+					$.each(page[assembly_id].list, function(h_i, h_v) {
+						if(h_v.type != "vipGrad"){
+							var bgcolor = '';
+							if(h_v.bgcolor_on){
+								bgcolor = 'background: ' + h_v.bgcolor;
+							}
+							html += `
+							<div class="ab bold ` + h_v.type + `" name="` + h_v.name + `" style="left:` + h_v.left + `; top:` + h_v.top + `;">`;
+							if(h_v.type == 'logo'){
+								if(h_v.value != '不显示'){
+									var h_v_img = h_v.img;
+									if(h_v.dict_id){
+										h_v_img = page[assembly_id].logoImg;
+									}
+									html += `
+								<img src="` + h_v_img + `" style="width:` + h_v.width + `;height:` + h_v.height + `;">`;
+								}
+							} else if(h_v.type == 'cardnoImg'){
+								if(h_v.value != '不显示' && h_v.dict_id){
+									html += `
+									<span class="iconfont icon-code" style="color:` + h_v.color + `;` + bgcolor + `"></span>`;
+								}
+							} else {
+								if(h_v.dict_id){
+									html += `
+								<div style="color:` + h_v.color + `;font-size:` + h_v.size + `px;` + bgcolor + `">
+									` + (h_v.title ? h_v.title : '') + `
+									` + h_v.dict_text + ` 
+								</div>`;
+								}
+							}
+							html += `
+							</div>`;
+						}
+					});
+					html += `
+						</div>
+					</div>`;
+			}
+			if(assembly_type == '图片广告'){
+				html += `
+					<div class="layui-carousel" id="carousel-` + assembly_id + `">
+						<div carousel-item="">`;
+					$.each(page[assembly_id].list, function(key, val){
+						html += `
+							<div>
+								<img src="` + val.img + `" alt="" class="layui-carousel-pic">
+							</div>`;
+					})
+					html += `
+						</div>
+					</div>`;
+			}
+			if(assembly_type == '魔方'){
+				html += `
+					<div class="cube-flex">
+						<div class="flex-default">`;
+						$.each(page[assembly_id].list, function(index, val){
+							html += `
+							<div class="flex-1 cube-item re">
+								<img src="` + val.img + `" alt="">
+								<div class="cube-text">
+									<p style="color:` + page[assembly_id].paramcolor + `;font-size:` + page[assembly_id].paramsize + `px;">` + val.dict_text + `</p>
+									<p style="color:` + page[assembly_id].titlecolor + `;font-size:` + page[assembly_id].titlesize + `px;">` + val.title + `</p>
+								</div>
+							</div>`;
+						})
+						html += `
+						</div>
+					</div>`;
+			}
+			if(assembly_type == '热区切图'){
+				html += `
+					<img src="` + (page[assembly_id].bg || page[assembly_id].bgList[0].img) + `" class="cutaway-pic">`;
+			}
+			if(assembly_type == '导航'){
+				html += `
+					<div class="` + (page[assembly_id].style == '1' ? 'text-nav-box' : 'img-nav-box') + `">`;
+					$.each(page[assembly_id].list,function(index, val) {
+						html += `
+						<div class="label-item">
+							<div class="label-left">
+								<img src="` + val.img + `" alt="">
+								<p style="color: ` + page[assembly_id].color + `;font-size: ` + page[assembly_id].size + `px;">` + val.title + `</p>
+							</div>`;
+							if(page[assembly_id].right_icon && page[assembly_id].style == '1'){
+								html += `
+							<div class="text-nav-icon"><img src="../_public/images/icon_right.png" alt=""></div>`;
+							}
+							html += `
+						</div>`;
+					});
+					html += `
+					</div>`;
+			}
+			if(assembly_type == '积分兑券'){
+				html += `
+					<div class="point-coupon-box point-coupon-box-` + page[assembly_id].style + `" style="margin-bottom: ` + page[assembly_id].defaultgap + `px">
+						<div class="point-coupon-item" style="margin-top: ` + page[assembly_id].defaultgap + `px">
+							<div class="point-coupon-div">
+								<div class="point-coupon-icon"><img src="` + (page[assembly_id].bg || page[assembly_id].bgList[0].img) + `" alt=""></div>
+								<div class="point-coupon-info">
+									<div class="point-coupon-name">`;
+
+								if(page[assembly_id].coupon_name){
+									html += `
+										<p style="font-size:` + page[assembly_id].coupon_name_size + `px;color:` + page[assembly_id].coupon_name_color + `">` + page[assembly_id].coupon_name + `</p>`;
+								}
+								if(page[assembly_id].coupon_endtime){
+									html += `
+										<div class="point-coupon-time" style="font-size:` + page[assembly_id].coupon_endtime_size + `px;color:` + page[assembly_id].coupon_endtime_color + `">` + page[assembly_id].coupon_endtime + `</div>`;
+								}
+								html += `
+									</div>`;
+								if(page[assembly_id].coupon_num){
+									html += `
+									<div class="point-coupon-num" style="font-size:` + page[assembly_id].coupon_num_size + `px;color:` + page[assembly_id].coupon_num_color + `">
+										<span class="iconfont icon-integral" style="color:` + page[assembly_id].coupon_num_color + `"></span>` + page[assembly_id].coupon_num + `
+									</div>`;
+								}
+								html += `
+								</div>`;
+								if(page[assembly_id].coupon_btn){
+									html += `
+								<div class="point-coupon-btn" style="background:` + page[assembly_id].coupon_btn_bgcolor + `;color:` + page[assembly_id].coupon_btn_color + `;font-size:` + page[assembly_id].coupon_btn_size + `px;">` + page[assembly_id].coupon_btn + `</div>
+								</div>`;
+								}
+								html += `
+							</div>
+						</div>
+					</div>`;
+			}
+			if(assembly_type == '数据列表'){
+				html += `
+					<div class="drag-data-list">
+						<div class="data-list-bg"><img src="` + (page[assembly_id].bg || page[assembly_id].bgList[0].img) + `" alt=""></div>
+						<div class="data-list-info">`;
+					$.each(page[assembly_id].list, function(index, val){
+						html += `
+							<div class="data-list-item" style="color: ` + val.color + `;font-size:` + val.size + `px;top:` + val.top + `;left:` + val.left + `;">` + val.dict_text + `</div>`;
+					})
+				html += `
+						</div>
+					</div>`;
+			}
+			if(assembly_type == '切换栏'){
+				html += `
+					<div class="drag-tab-list">
+						<div class="data-tab-info flex-center" style="background-color: ` + page[assembly_id].bgcolor + `;">`;
+					$.each(page[assembly_id].list, function(index, val){
+						html += `
+							<div class="data-tab-item flex-1" style="color: ` + page[assembly_id].color + `;font-size:` + page[assembly_id].size + `px;">` + val.title + `</div>`;
+					})
+				html += `
+						</div>
+					</div>`;
+			}
+			if(assembly_type == '公告'){
+				html += `
+					<div class="drag-notice-style">
+						<div class="notice-box" style="background: ` + page[assembly_id].bgcolor + `;color: ` + page[assembly_id].textcolor + `;">
+							<span class="iconfont icon-horn"></span>
+							<div class="notice-text">`;
+							if(page[assembly_id].scroll){
+								html += `
+								<marquee scrollamount="3" style="font-size: ` + page[assembly_id].textsize + `px;">` + page[assembly_id].content + `</marquee>`;
+							} else {
+								html += `
+								<p style="font-size: ` + page[assembly_id].textsize + `px;">` + page[assembly_id].content + `</p>`;
+							}
+							html += `
+							</div>
+						</div>
+					</div>`;
+			}
+
+			if(assembly_type == '辅助空白'){
+				html += `
+					<div class="drag-blank-style" style="height: ` + page[assembly_id].defaultgap + `px;background: ` + page[assembly_id].bgcolor + `;"></div>`;
+			}
+			if(assembly_type == '表单'){
+				html += `
+					<div class="form-box form-box-` + page[assembly_id].style + `">
+						<div class="layui-form">`;
+					$.each(page[assembly_id].list, function(form_i, form_v){
+						html += `
+							<div class="layui-form-item">
+								<div class="form-title" style="color: ` + page[assembly_id].textcolor + `;font-size:` + page[assembly_id].textsize + `px;">` + form_v.title + `</div>
+							</div>`;
+					})
+					html += `
+						</div>
+						<div class="layui-form-item drag-form-submit">
+							<button type="submit" class="layui-btn layui-btn-sm layui-btn-new" style="background:` + page[assembly_id].btn_bgcolor + `; color: ` + page[assembly_id].btn_color + `;font-size:` + page[assembly_id].btn_size + `px;">` + page[assembly_id].btn_text + `</button>
+						</div>
+					</div>`;
+			}
+
+			if(assembly_type == '红包组件'){
+				html += `
+					<div class="drag-redpaper-style">
+						<div class="redpaper-box re">
+							<img src="` + (page[assembly_id].bg || page[assembly_id].bgList[0].img) + `" class="redpaper-bg">
+							<div class="ab" style="background:rgba(0,0,0,0.4);left:` + page[assembly_id].left + `;right:` + page[assembly_id].right + `;top:` + page[assembly_id].top + `;bottom:` + page[assembly_id].bottom + `;"></div>`;
+							if(page[assembly_id].red_type == 'wheel'){
+								html += `
+							<div class="ab" style="left:` + page[assembly_id].wheel_left + `;right:` + page[assembly_id].wheel_right + `;top:` + page[assembly_id].wheel_top + `;">
+								<img src="` + page[assembly_id].list[0].img + `" width="100%">
+							</div>`;
+							}
+							html += `
+						</div>
+					</div>`;
+			}
+
+			if(assembly_type == '好友瓜分'){
+				html += `
+					<div class="drag-redpaper-style">
+						<div class="carveup-box re">
+							<img src="` + (page[assembly_id].bg || page[assembly_id].bgList[0].img) + `" class="redpaper-bg">`;
+							$.each(page[assembly_id].list, function(index, val) {
+								html += `
+							<div class="ab ` + (val.name == '邀请按钮' ? 'carveup-btn' : '') + `" style="text-align:center;left:` + val.left + `;right:` + val.right + `;top:` + val.top + `;bottom:` + val.bottom + `;font-size:` + val.size + `px;color:` + val.color + `;">`;
+								if(val.name == '好友瓜分组'){
+									html += `
+								<div class="avatar flex-center">
+									<div class="flex-1"><img src="` + crm.default_img + `" alt=""></div>
+								</div>
+									`;
+								} else {
+									html += `
+								<p class="carveup-p" style="font-size:` + val.size + `px;color:` + val.color + `;">` + (val.name == '邀请按钮' ? '我要开/参团' : val.name) + ` </p>
+									`;
+								}
+								html += `
+							</div>`;
+							});
+							html += `
+						</div>
+					</div>`;
+			}
+
+			html += `
+				<div class="drag-hidden">
+					<div class="drag-assembly-id">` + assembly_id + `</div>
+					<div class="drag-close" onclick="del_drag(this, '` + assembly_type + `', ` + assembly_id + `, 'assembly', '');"><img src="../_public/images/icon-close.png" alt="删除组件"></div>
+				</div>`;
+			$("#pro_div_" + assembly_id).empty().append(html);
+
+
+			// 轮播
+			layui.use('carousel', function(){
+				var $ = layui.$,
+					carousel = layui.carousel;
+				carousel.render({
+					elem: '#carousel-' + assembly_id,
+					width: '100%', //设置容器宽度
+					height: '150px',
+					autoplay: page[assembly_id].autoplay, //是否自动切换
+					interval: page[assembly_id].defaultgap * 1000, //自动切换的时间间隔
+					anim: 'default', //切换动画方式default（左右切换）updown（上下切换）fade（渐隐渐显切换）
+					arrow: 'always', //切换箭头默认显示状态 hover（悬停显示）always（始终显示）none（始终不显示）
+					indicator: 'inside', //指示器位置 inside（容器内部）outside（容器外部）none（不显示）
+				});  
+			})
+			// if(assembly_type == '头部卡片'){
+			// 	console.log(assembly_id)
+			// 	for (var u_i = 0; u_i < page[assembly_id].list.length; u_i++) {
+			// 		var dragDiv = $("#pro_div_" + assembly_id).find(".drag-item").eq(u_i)[0];
+			// 		dragFnP(dragDiv, assembly_id, assembly_type)
+			// 	}
+			// }
+		}
+		// 右侧页面
+		function rightHtml(assembly_type, assembly_id){
+			var html_st = `
+					<fieldset class="layui-elem-field layui-field-title">
+						<legend>` + assembly_type + `</legend>
+					</fieldset>
+					<div class="layui-field-title layui-field-title-red">排序: ` + assembly_id + `</div>`,
+				addbtn_html = `
+					<div class="drag-pic-add-btn" onclick="pic_add('` + assembly_type + `', ` + assembly_id + `);">
+						<button type="button" class="layui-btn layui-btn-primary"><i class="layui-icon layui-icon-add-1"></i> 新增</button>
+					</div>`;
+				
+
+			if(assembly_type == '图片广告'){
+				html_st += `
+					<div class="drag-write-style drag-pic-style drag-banner-style">
+						<div class="style-box-item">
+							<div class="layui-field-title">自动轮播</div>
+							<div class="layui-form">
+								<input type="checkbox" name="" lay-skin="switch" lay-filter="dragswitch" data-name="autoplay" lay-text="开启|关闭" ` + (page[assembly_id].autoplay ? 'checked' : '') + `>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-field-title">轮播时间（单位：s）</div>
+							<div id="drag-pic-s-` + assembly_id + `" class="demo-slider"></div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-field-title">图片列表</div>
+							<div class="style-layui-tips">
+								<p>最多可添加20张，图片尺寸统一；</p>
+								<p>图片建议尺寸：宽750像素，高度不限；</p>
+								<p>如果只上传一张图片，则默认不轮播，上面设置失效；</p>
+								<p>从小到大排序。</p>
+							</div>
+							<div class="drag-pic-piclist" id="drag-piclist-` + assembly_id + `"></div>
+						</div>
+					</div>
+					` + addbtn_html + ` `;
+			}
+			if(assembly_type == '头部卡片'){
+				html_st += `
+					<div class="drag-write-style drag-pic-style drag-head-card-style">
+						<div class="style-box-item">
+							<div class="layui-form-item layui-form-url">
+								<label class="layui-form-label layui-field-title">卡片链接</label>
+								<div class="layui-input-block">
+									<input type="text" name="url" lay-verify="url" autocomplete="off" placeholder="请选择链接" class="layui-input w12" value="` + (page[assembly_id].value ? page[assembly_id].value : (page[assembly_id].path ? (crm.other_app + page[assembly_id].path) : '' )) + `" data-index="-1" data-appid="` + page[assembly_id].appid + `" onFocus="inputFocus(event, this, ` + assembly_id + `,  'headcard');">
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-field-title">卡片设置</div>
+							<div class="style-layui-tips">
+								<p>请上传卡片背景</p>
+								<p>建议尺寸：750 x 375像素</p>
+								<p>必须配置列表中的卡等级（会员基础信息——卡等级）</p>
+							</div>
+							<div class="drag-pic-piclist">
+								<div id="drag-piclist-` + assembly_id + `"></div>
+							</div>
+						</div>`;
+						html_st += `
+					</div>
+					` + addbtn_html + ` `;
+			}
+			if(assembly_type == '魔方'){
+				html_st += `
+					<div class="drag-write-style drag-pic-style drag-cube-style">
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">标题颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].titlecolor + `" placeholder="请选择文字颜色" class="layui-input color-picker-input" data-name="titlecolor">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">标题大小</label>
+								<div class="layui-input-block flex-default flex-tc">
+									<input type="number" name="titlesize" data-only="only" lay-verify="titlesize" autocomplete="off" placeholder="标题大小" class="layui-input w12" value="` + page[assembly_id].titlesize + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+									<p class="ml5">像素</p>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">变量颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].paramcolor + `" placeholder="请选择文字颜色" class="layui-input color-picker-input" data-name="paramcolor">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">变量大小</label>
+								<div class="layui-input-block flex-default flex-tc">
+									<input type="number" name="paramsize" data-only="only" lay-verify="paramsize" autocomplete="off" placeholder="变量大小" class="layui-input w12" value="` + page[assembly_id].paramsize + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+									<p class="ml5">像素</p>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-field-title">魔方布局</div>
+							<div class="style-layui-tips">
+								<p>建议尺寸：宽度750像素，高度不限；</p>
+								<p>图片尺寸统一；</p>
+								<p>如果不上传图片，则默认没有背景图片，默认高度60像素。</p>
+							</div>
+							<div class="cube-up">
+								<div class="drag-pic-piclist" id="drag-piclist-` + assembly_id + `"></div>
+							</div>
+						</div>
+					</div>
+					` + addbtn_html+ ` `;
+			}
+			if(assembly_type == '热区切图'){
+				html_st += `
+					<div class="drag-write-style drag-cutaway-style">
+						<div class="style-box-item">
+							<label class="layui-form-label layui-field-title">选择图片</label>
+							<div class="layui-input-block mt6">
+								<div id="drag-piclist-` + assembly_id + `"></div>
+								<div class="drag-piclist-item">
+									<div class="style-layui-tips">
+										<p>建议尺寸：宽度750像素，高度不限</p>
+									</div>
+									<button type="button" class="layui-btn layui-btn-cutaway" onclick="cutawayClick(` + assembly_id + `)">绘制热区</button>
+								</div>
+							</div>
+						</div>
+					</div>`;
+			}
+			if(assembly_type == '导航'){
+				var style_type = [
+					{ id: 1, value: '左右' },
+					{ id: 2, value: '上下' },
+				];
+				html_st += `
+					<div class="drag-write-style drag-pic-style">
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">导航样式</label>
+								<div class="layui-input-block w16">
+									<select name="" lay-filter="dict-logo" data-key="style">`;
+								$.each(style_type, function(s_i, s_v){
+									html_st += `
+										<option value="` + s_v.id + `" ` + ((page[assembly_id].style == s_v.id) ? 'selected' : '') + `>` + s_v.value + `</option>`;
+								})
+								html_st += `
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">右侧箭头</label>
+								<div class="layui-input-block">
+									<input type="checkbox" name="" lay-skin="switch" lay-filter="dragswitch" data-name="right_icon" lay-text="开启|关闭" ` + (page[assembly_id].right_icon ? 'checked' : '') + `>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">标题颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].color + `" placeholder="请选择标题颜色" class="layui-input color-picker-input" data-name="color">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">标题大小</label>
+								<div class="layui-input-block flex-default flex-tc">
+									<input type="number" name="size" data-only="only" lay-verify="size" autocomplete="off" placeholder="标题大小" class="layui-input w12" value="` + page[assembly_id].size + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+									<p class="ml5">像素</p>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-field-title">导航列表</div>
+							<div class="style-layui-tips">
+								<p>图片建议尺寸：64x64像素</p>
+								<p>如果不上传图片，则图片默认不显示</p>
+							</div>
+							<div class="drag-pic-piclist" id="drag-piclist-` + assembly_id + `"></div>
+						</div>
+					</div>
+					` + addbtn_html+ ` `;
+			}
+			if(assembly_type == '积分兑券'){
+				var style_type = [
+					{ id: 1, value: '左右' },
+					{ id: 2, value: '上下' },
+				];	
+				html_st += `
+					<div class="drag-write-style drag-point-coupon-style">
+						<div class="style-box-item">
+							<div class="layui-field-title">兑券样式</div>
+							<div class="layui-form">
+								<div class="w16">
+									<select name="" lay-filter="dict-logo" data-key="style">`;
+								$.each(style_type, function(s_i, s_v){
+									html_st += `
+										<option value="` + s_v.id + `" ` + ((page[assembly_id].style == s_v.id) ? 'selected' : '') + `>` + s_v.value + `</option>`;
+								})
+								html_st += `
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-field-title">兑券间隙</div>
+							<div id="drag-pic-s-` + assembly_id + `" class="demo-slider"></div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-field-title">优惠券图标</div>
+							<div class="layui-form">
+								<div class="drag-piclist-item">
+									<div class="style-layui-tips">
+										<p>左右样式的建议尺寸：75 x 75像素；</p>
+										<p>上下样式的建议尺寸：宽750像素，高度不限。</p>
+									</div>
+									<div id="drag-piclist-` + assembly_id + `"></div>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-field-title">显示列表</div>
+							<div class="drag-pic-piclist">
+								<div class="layui-form">
+									<div class="layui-form-item color-picker-box-` + assembly_id + `">
+										<input type="checkbox" lay-skin="primary" name="" value="` + page[assembly_id].coupon_name + `" title="显示券名称" lay-filter="choiceCheck" data-name="coupon_name" ` + (page[assembly_id].coupon_name ? 'checked' : '') + ` disabled>
+										<div class="overflow-h mt6">
+											<div class="layui-form-label layui-field-title layui-field-title100">自定义颜色</div>
+											<div class="layui-form">
+												<div class="layui-input-inline w12">
+													<input type="text" value="` + page[assembly_id].coupon_name_color + `" placeholder="请选择颜色" class="layui-input color-picker-input" data-name="coupon_name_color">
+												</div>
+												<div class="layui-inline">
+													<div class="color-picker"></div>
+												</div>
+											</div>
+										</div>
+										<div class="overflow-h">
+											<label class="layui-form-label layui-field-title layui-field-title100">文字大小</label>
+											<div class="layui-form">
+												<div class="flex-default flex-tc">
+													<input type="number" name="coupon_name_size" data-only="only" lay-verify="coupon_name_size" autocomplete="off" placeholder="文字大小" class="layui-input w12" value="` + page[assembly_id].coupon_name_size + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+													<p class="ml5">像素</p>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="layui-form-item color-picker-box-` + assembly_id + `">
+										<input type="checkbox" lay-skin="primary" name="" value="` + page[assembly_id].coupon_endtime + `" title="显示截止日期" lay-filter="choiceCheck" data-name="coupon_endtime" ` + (page[assembly_id].coupon_endtime ? 'checked' : '') + ` disabled>
+										<div class="overflow-h mt6">
+											<div class="layui-form-label layui-field-title layui-field-title100">自定义颜色</div>
+											<div class="layui-form">
+												<div class="layui-input-inline w12">
+													<input type="text" value="` + page[assembly_id].coupon_endtime_color + `" placeholder="请选择颜色" class="layui-input color-picker-input" data-name="coupon_endtime_color">
+												</div>
+												<div class="layui-inline">
+													<div class="color-picker"></div>
+												</div>
+											</div>
+										</div>
+										<div class="overflow-h">
+											<label class="layui-form-label layui-field-title layui-field-title100">文字大小</label>
+											<div class="layui-form">
+												<div class="flex-default flex-tc">
+													<input type="number" name="coupon_endtime_size" data-only="only" lay-verify="coupon_endtime_size" autocomplete="off" placeholder="文字大小" class="layui-input w12" value="` + page[assembly_id].coupon_endtime_size + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+													<p class="ml5">像素</p>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="layui-form-item color-picker-box-` + assembly_id + `">
+										<input type="checkbox" lay-skin="primary" name="" value="` + page[assembly_id].coupon_num + `" title="显示券积分/价钱" lay-filter="choiceCheck" data-name="coupon_num" ` + (page[assembly_id].coupon_num ? 'checked' : '') + ` disabled>
+										<div class="overflow-h mt6">
+											<div class="layui-form-label layui-field-title layui-field-title100">自定义颜色</div>
+											<div class="layui-form">
+												<div class="layui-input-inline w12">
+													<input type="text" value="` + page[assembly_id].coupon_num_color + `" placeholder="请选择颜色" class="layui-input color-picker-input" data-name="coupon_num_color">
+													</div>
+												<div class="layui-inline">
+													<div class="color-picker"></div>
+												</div>
+											</div>
+										</div>
+										<div class="overflow-h">
+											<label class="layui-form-label layui-field-title layui-field-title100">文字大小</label>
+											<div class="layui-form">
+												<div class="flex-default flex-tc">
+													<input type="number" name="coupon_num_size" data-only="only" lay-verify="coupon_num_size" autocomplete="off" placeholder="文字大小" class="layui-input w12" value="` + page[assembly_id].coupon_num_size + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+													<p class="ml5">像素</p>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="color-picker-box-` + assembly_id + `">
+										<input type="checkbox" lay-skin="primary" name="" value="` + page[assembly_id].coupon_btn + `" title="显示兑换按钮" lay-filter="choiceCheck" data-name="coupon_btn" ` + (page[assembly_id].coupon_btn ? 'checked' : '') + ` disabled>
+										<div class="overflow-h mt6">
+											<div class="layui-form-label layui-field-title layui-field-title100">按钮文字</div>
+											<div class="layui-form">
+												<input type="text" name="coupon_btn" data-only="only" lay-verify="coupon_btn" autocomplete="off" placeholder="请输入按钮文字" class="layui-input w12" value="` + page[assembly_id].coupon_btn + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+											</div>
+										</div>
+										<div class="overflow-h mt6">
+											<div class="layui-form-label layui-field-title layui-field-title100">背景颜色</div>
+											<div class="layui-form">
+												<div class="layui-input-inline w12">
+													<input type="text" value="` + page[assembly_id].coupon_btn_bgcolor + `" placeholder="请选择颜色" class="layui-input color-picker-input" data-name="coupon_btn_bgcolor">
+													</div>
+												<div class="layui-inline">
+													<div class="color-picker"></div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="mt6 color-picker-box-` + assembly_id + `">
+										<div class="overflow-h">
+											<div class="layui-form-label layui-field-title layui-field-title100">文字颜色</div>
+											<div class="layui-form">
+												<div class="layui-input-inline w12">
+													<input type="text" value="` + page[assembly_id].coupon_btn_color + `" placeholder="请选择颜色" class="layui-input color-picker-input" data-name="coupon_btn_color">
+													</div>
+												<div class="layui-inline">
+													<div class="color-picker"></div>
+												</div>
+											</div>
+										</div>
+										<div class="overflow-h mt6">
+											<label class="layui-form-label layui-field-title layui-field-title100">文字大小</label>
+											<div class="layui-form">
+												<div class="flex-default flex-tc">
+													<input type="number" name="coupon_btn_size" data-only="only" lay-verify="coupon_btn_size" autocomplete="off" placeholder="文字大小" class="layui-input w12" value="` + page[assembly_id].coupon_btn_size + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+													<p class="ml5">像素</p>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>`;
+			}
+			if(assembly_type == '数据列表'){
+				html_st += `
+					<div class="drag-write-style drag-pic-style drag-list-style">
+						<div class="style-box-item" id="variable-` + assembly_id + `"></div>
+						<div class="style-box-item">
+							<div class="layui-field-title">列表间隙</div>
+							<div id="drag-pic-s-` + assembly_id + `" class="demo-slider"></div>
+						</div>
+						<div class="style-box-item">
+							<div class="style-layui-tips">
+								<p>上传列表背景图片</p>
+								<p>宽度750像素，高度根据内容配置</p>
+							</div>
+							<div class="drag-pic-piclist" id="drag-piclist-` + assembly_id + `"></div>
+						</div> 
+					</div>
+					` + addbtn_html+ ``;
+			}
+			if(assembly_type == '切换栏'){
+				var style_type = [
+					{ id: 'Y', value: '是' },
+					{ id: 'N', value: '否' },
+				];	
+				html_st += `
+					<div class="drag-write-style drag-pic-style drag-list-style">
+						<div class="style-box-item">
+							<div class="layui-field-title">固定顶部</div>
+							<div class="layui-form">
+								<div class="w16">
+									<select name="" lay-filter="dict-logo" data-key="fixed">`;
+								$.each(style_type, function(s_i, s_v){
+									html_st += `
+										<option value="` + s_v.id + `" ` + ((page[assembly_id].fixed == s_v.id) ? 'selected' : '') + `>` + s_v.value + `</option>`;
+								})
+								html_st += `
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">背景颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].bgcolor + `" placeholder="请选择背景颜色" class="layui-input color-picker-input" data-name="bgcolor">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">默认颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].color + `" placeholder="请选择文字颜色" class="layui-input color-picker-input" data-name="color">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">选中颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].oncolor + `" placeholder="请选择文字颜色" class="layui-input color-picker-input" data-name="oncolor">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">字体大小</label>
+								<div class="layui-input-block flex-default flex-tc">
+									<input type="number" name="paramsize" data-only="only" lay-verify="size" autocomplete="off" placeholder="字体大小" class="layui-input w12" value="` + page[assembly_id].size + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+									<p class="ml5">像素</p>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="drag-pic-piclist" id="drag-piclist-` + assembly_id + `"></div>
+						</div> 
+					</div>
+					` + addbtn_html+ ``;
+			}
+			if(assembly_type == '公告'){
+				html_st += `
+					<div class="drag-write-style drag-notice-style">
+						<div class="style-box-item">
+							<div class="layui-form-label layui-field-title">内容滚动</div>
+							<div class="layui-input-block">
+								<div class="layui-form">
+									<input type="checkbox" lay-skin="switch" lay-filter="dragswitch" data-name="scroll" lay-text="是|否" ` + (page[assembly_id].scroll ? 'checked' : '') + `>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-form-label layui-field-title">公告内容</div>
+							<div class="layui-input-block">
+								<textarea placeholder="请填写内容" name="content" data-only="only" class="layui-textarea" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">` + page[assembly_id].content + `</textarea>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">背景颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].bgcolor + `" placeholder="请选择背景颜色" class="layui-input color-picker-input" data-name="bgcolor">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">文字颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].textcolor + `" placeholder="请选择文字颜色" class="layui-input color-picker-input" data-name="textcolor">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">文字大小</label>
+								<div class="layui-input-block flex-default flex-tc">
+									<input type="number" name="textsize" data-only="only" lay-verify="textsize" autocomplete="off" placeholder="文字大小" class="layui-input w12" value="` + page[assembly_id].textsize + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+									<p class="ml5">像素</p>
+								</div>
+							</div>
+						</div>
+					</div>`;
+			}
+			if(assembly_type == '辅助空白'){
+				html_st += `
+					<div class="drag-write-style drag-pic-style">
+						<div class="style-box-item">
+							<div class="layui-field-title">空白高度</div>
+							<div id="drag-pic-s-` + assembly_id + `" class="demo-slider"></div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">空白颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].bgcolor + `" placeholder="请选择空白颜色" class="layui-input color-picker-input" data-name="bgcolor">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>`;
+			}
+			if(assembly_type == '表单'){
+				var style_type = [
+					{ id: 1, value: '上下' },
+					{ id: 2, value: '左右' },
+				];
+				html_st += `
+					<div class="drag-write-style drag-pic-style drag-form-style">
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">表单样式</label>
+								<div class="layui-input-block w16">
+									<select name="" lay-filter="dict-logo" data-key="style">`;
+								$.each(style_type, function(s_i, s_v){
+									html_st += `
+										<option value="` + s_v.id + `" ` + ((page[assembly_id].style == s_v.id) ? 'selected' : '') + `>` + s_v.value + `</option>`;
+								})
+								html_st += `
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">赠送次数</label>
+								<div class="layui-input-block">
+									<input type="text" name="gift_num" data-only="only" lay-verify="gift_num" autocomplete="off" placeholder="请输入赠送次数" class="layui-input w16" value="` + page[assembly_id].gift_num + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+									<div class="style-layui-tips">
+										<p>为空，则默认不限次数</p>
+									</div>
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">赠送积分</label>
+								<div class="layui-input-block">
+									<input type="text" name="gift_Ignum" data-only="only" lay-verify="gift_Ignum" autocomplete="off" placeholder="请输入赠送积分数量" class="layui-input w16" value="` + page[assembly_id].gift_Ignum + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+									<div class="style-layui-tips">
+										<p>为空，则默认不赠送积分</p>
+									</div>
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">送优惠券</label>
+								<div class="layui-input-block">
+									<input type="text" name="gift_coupon" data-only="only" lay-verify="gift_coupon" autocomplete="off" placeholder="请输入赠送优惠券ID" class="layui-input w16" value="` + page[assembly_id].gift_coupon + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+									<div class="style-layui-tips">
+										<p>为空，则默认不赠送优惠券</p>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">标题颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].textcolor + `" placeholder="请选择标题文字颜色" class="layui-input color-picker-input" data-name="textcolor">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">标题大小</label>
+								<div class="layui-input-block">
+									<div class="layui-form flex-default flex-tc">
+										<input type="number" name="textsize" data-only="only" lay-verify="textsize" autocomplete="off" placeholder="文字大小" class="layui-input w12" value="` + page[assembly_id].textsize + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+										<p class="ml5">像素</p>
+									</div>
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">变量颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].paramcolor + `" placeholder="请选择变量文字颜色" class="layui-input color-picker-input" data-name="paramcolor">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">按钮标题</label>
+								<div class="layui-input-block">
+									<input type="text" name="btn_text" data-only="only" lay-verify="btn_text" autocomplete="off" placeholder="请输入按钮标题" class="layui-input w16" value="` + page[assembly_id].btn_text + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">按钮背景</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].btn_bgcolor + `" placeholder="请选择按钮背景颜色" class="layui-input color-picker-input" data-name="btn_bgcolor">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">按钮颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + page[assembly_id].btn_color + `" placeholder="请选择按钮文字颜色" class="layui-input color-picker-input" data-name="btn_color">
+										</div>
+									<div class="layui-inline">
+										<div class="color-picker"></div>
+									</div>
+								</div>
+							</div>
+							<div class="layui-form mt6">
+								<label class="layui-form-label layui-field-title">按钮大小</label>
+								<div class="layui-input-block">
+									<div class="layui-form flex-default flex-tc">
+										<input type="number" name="btn_size" data-only="only" lay-verify="btn_size" autocomplete="off" placeholder="文字大小" class="layui-input w12" value="` + page[assembly_id].btn_size + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+										<p class="ml5">像素</p>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-field-title">表单列表</div>
+							<div class="style-layui-tips">
+								<p>如果全都选择 “不可以修改”，则默认不显示按钮；</p>
+								<p>从小到大排序。</p>
+							</div>
+							<div class="layui-form">
+								<div class="drag-pic-piclist" id="drag-piclist-` + assembly_id + `"></div>
+							</div>
+						</div>
+					</div>
+					` + addbtn_html+ ` `;
+			}
+			if(assembly_type == '红包组件'){
+				var red_type = [
+					{ type: 'default', value: '点击即领' },
+					{ type: 'rain', value: '红包雨' },
+					{ type: 'scratch', value: '刮刮卡' },
+					{ type: 'shake', value: '摇一摇' },
+					{ type: 'egg', value: '砸金蛋' },
+					{ type: 'wheel', value: '大转盘' },
+					{ type: 'scan', value: '扫码抽奖' },
+				];
+				html_st += `
+					<div class="drag-write-style drag-pic-style drag-redpaper-style">
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">营销方式</label>
+								<div class="layui-input-block w16">
+									<select name="" lay-filter="dict-logo" data-key="red_type" type="redpaper">`;
+								$.each(red_type, function(s_i, s_v){
+									html_st += `
+										<option value="` + s_v.type + `" ` + ((page[assembly_id].red_type == s_v.type) ? 'selected' : '') + `>` + s_v.value + `</option>`;
+								})
+								html_st += `
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">营销活动</label>
+								<div class="layui-input-block w16">
+									<select lay-filter="dict-logo" type="redpaper_activity" data-key="activity_id" class="red_lottery_` + assembly_id + `"></select>
+								</div>
+							</div>
+						</div>`;
+						if(page[assembly_id].red_type == 'egg'){
+							html_st += `
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">开启转盘</label>
+								<div class="layui-input-block">
+									<input type="checkbox" name="" lay-skin="switch" lay-filter="dragswitch" data-name="eggAround" lay-text="开启|关闭" ` + (page[assembly_id].eggAround ? 'checked' : '') + `>
+								</div>
+							</div>
+						</div>
+							`;
+						}
+						html_st += `
+						<div class="style-box-item">
+							<div class="layui-field-title">背景图片</div>
+							<div>
+								<div class="style-layui-tips">
+									<p>请上传红包背景图；</p>
+									<p>建议尺寸：宽度750像素，高度不限。</p>
+								</div>
+								<div class="drag-pic-piclist" id="drag-piclist-` + assembly_id + `"></div>
+							</div>
+						</div>`;
+						if(page[assembly_id].red_type == 'wheel'){
+							html_st += `
+						<div class="style-box-item">
+							<div class="layui-field-title">优惠券id组</div>
+							<div>
+								<div class="style-layui-tips">
+									<p>请按照顺时针的顺序，选择每个区域的优惠券id</p>
+								</div>
+								<div class="layui-form">
+									<div class="re">`;
+									$.each(page[assembly_id].coupon, function(cou_i, cou_v) {
+										html_st += `
+										<div class="re">
+											<div class="add-plus-in">
+												<select lay-filter="dict-logo" type="redpaper_coupon" data-index="` + cou_i + `" data-key="id" class="activity_lottery_` + assembly_id + `_` + cou_i + `"></select>
+											</div>
+											<div class="add-plus" onclick="delPlus(this, ` + assembly_id + `, '` + assembly_type + `');">-</div>
+										</div>`;
+									});
+									html_st += `
+										<div class="add-plus" onclick="addPlus(this, ` + assembly_id + `, '` + assembly_type + `');">+</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-field-title">转盘区域</div>
+							<div class="layui-form drag-piclist-item-n">
+								<div class="flex-center">
+									<div class="flex-1">
+										<label class="layui-form-label layui-field-title">距左</label>
+										<div class="layui-input-block">
+											<input type="text" name="wheel_left" data-only="only" lay-verify="wheel_left" autocomplete="off" placeholder="向左距离" class="layui-input" value="` + page[assembly_id].wheel_left + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+										</div>
+									</div>
+									<div class="flex-1">
+										<label class="layui-form-label layui-field-title">距上</label>
+										<div class="layui-input-block">
+											<input type="text" name="wheel_top" data-only="only" lay-verify="wheel_top" autocomplete="off" placeholder="向上距离" class="layui-input" value="` + page[assembly_id].wheel_top + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+										</div>
+									</div>
+								</div>
+								<div class="flex-center mt6">
+									<div class="flex-1">
+										<label class="layui-form-label layui-field-title">距右</label>
+										<div class="layui-input-block">
+											<input type="text" name="wheel_right" data-only="only" lay-verify="wheel_right" autocomplete="off" placeholder="向右距离" class="layui-input" value="` + page[assembly_id].wheel_right + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>`;
+						}
+						html_st += `
+						<div class="style-box-item" style="display: none;">
+							<div class="layui-field-title">背景音乐</div>
+							<div>
+								<button type="button" class="layui-btn" id="audio-` + assembly_id + `"><i class="layui-icon"></i>上传音频</button> 
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-field-title">操作区域</div>
+							<div class="layui-form drag-piclist-item-n">
+								<div class="flex-center">
+									<div class="flex-1">
+										<label class="layui-form-label layui-field-title">距左</label>
+										<div class="layui-input-block">
+											<input type="text" name="left" data-only="only" lay-verify="left" autocomplete="off" placeholder="向左距离" class="layui-input" value="` + page[assembly_id].left + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+										</div>
+									</div>
+									<div class="flex-1">
+										<label class="layui-form-label layui-field-title">距上</label>
+										<div class="layui-input-block">
+											<input type="text" name="top" data-only="only" lay-verify="top" autocomplete="off" placeholder="向上距离" class="layui-input" value="` + page[assembly_id].top + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+										</div>
+									</div>
+								</div>
+								<div class="flex-center mt6">
+									<div class="flex-1">
+										<label class="layui-form-label layui-field-title">距右</label>
+										<div class="layui-input-block">
+											<input type="text" name="right" data-only="only" lay-verify="right" autocomplete="off" placeholder="向右距离" class="layui-input" value="` + page[assembly_id].right + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+										</div>
+									</div>
+									<div class="flex-1">
+										<label class="layui-form-label layui-field-title">距下</label>
+										<div class="layui-input-block">
+											<input type="text" name="bottom" data-only="only" lay-verify="bottom" autocomplete="off" placeholder="向下距离" class="layui-input" value="` + page[assembly_id].bottom + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div> `;
+			}
+			if(assembly_type == '好友瓜分'){
+				html_st += `
+					<div class="drag-write-style drag-pic-style drag-carveup-style">
+						<div class="style-box-item">
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">营销活动</label>
+								<div class="layui-input-block w16">
+									<select lay-filter="dict-logo" data-key="activity_id" class="carveup_lottery_` + assembly_id + `"></select>
+								</div>
+							</div>
+						</div>
+						<div class="style-box-item">
+							<div class="layui-field-title">背景图片</div>
+							<div>
+								<div class="style-layui-tips">
+									<p>请上传背景图；</p>
+									<p>建议尺寸：宽度750像素，高度不限。</p>
+								</div>
+								<div class="drag-pic-piclist" id="drag-piclist-` + assembly_id + `"></div>
+							</div>
+						</div>
+					</div> `;
+			}
+
+			$(".style-box-" + assembly_id).empty().append(html_st);
+
+			$('.drag-write-style').css({
+				'height': ($(window).height() - 220) + 'px',
+			})
+			$('.drag-write-style.drag-pic-style').css({
+				'height': ($(window).height() - 250) + 'px',
+			})
+
+			form_up(assembly_type, assembly_id);
+			variableHtml(assembly_type, assembly_id);
+		}
+		function form_up(assembly_type, assembly_id){
+			var form_up_html = '';
+			if( assembly_type == page[assembly_id].tag ){
+				// 背景图片
+				if(page[assembly_id].bgList && page[assembly_id].bgList.length > 0){
+					form_up_html += `
+					<div class="flex-default drag-piclist-flex">`;
+					$.each(page[assembly_id].bgList, function(index, val) {
+						var name = '';
+						if(val.name){
+							name = `<div class="bgList-name">` + val.name + `</div>`
+						}
+						form_up_html += `
+						<div class="drag-piclist-item drag-piclist-item-n">
+							` + name + `
+							<a href="javascript:;" class="flexImg bgList-img-btn btn-pic-upload-` + assembly_id + ` btn-pic-upload-` + assembly_id + `-` + index + `" style="width: auto">
+								<img src=` + val.img + ` alt="">
+							</a>
+						</div>`;
+					})
+					form_up_html += `
+					</div>`;
+				} 
+				// 列表图片
+				if(page[assembly_id].list && page[assembly_id].list.length > 0){
+					var form_up_class = 'list-'+ page[assembly_id].type;
+					if(assembly_type == '红包组件'){
+						if((page[assembly_id].red_type == 'rain' || page[assembly_id].red_type == 'wheel' || page[assembly_id].red_type == 'egg')){
+							form_up_class = 'flex-default redpaper-list-' + page[assembly_id].red_type;
+						} else {
+							form_up_class = 'none';
+						}
+					}
+					form_up_html += `
+					<div class="` + form_up_class + `">`;
+					$.each(page[assembly_id].list, function(index, val) {
+						// 删除
+						var del_html = `
+							<div class="drag-hidden">
+								<div class="drag-close" onclick="del_drag(this, '` + assembly_type + `', ` + assembly_id + `, ` + index + `, 'list');"><img src="../_public/images/icon-close.png" alt="删除"></div>
+							</div>`;
+
+						var up_img_html = `
+							<a href="javascript:;" class="flexImg list-img-btn btn-pic-upload-` + assembly_id + ` btn-pic-upload-` + assembly_id + `-` + index + `">
+								<img src=` + val.img + ` alt="">
+							</a>`;
+						
+						// 输入标题 title
+						var title_html = `
+							<div class="layui-form-item layui-form-title">
+								<label class="layui-form-label">标题` + (index + 1) + `</label>
+								<div class="layui-input-block">
+									<input type="text" name="title" data-index="` + index + `" lay-verify="title" autocomplete="off" placeholder="请输入标题" class="layui-input" value="` + (val.title ? val.title : '') + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+								</div>
+							</div>`;
+						//选择链接
+						var url_html = `
+							<div class="layui-form-item layui-form-url">
+								<label class="layui-form-label">链接` + (index + 1) + `</label>
+								<div class="layui-input-block">
+									<input type="text" name="url" lay-verify="url" autocomplete="off" placeholder="请选择链接" class="layui-input" value="` + (val.value ? val.value : ( val.path ? (crm.other_app + val.path) : '')) + `" data-index="` + index + `" data-appid="` + val.appid + `" onFocus="inputFocus(event, this, ` + assembly_id + `, '');">
+								</div>
+							</div>`; 
+						// 背景颜色
+						var bgColor_html = '';
+						if(val.bgcolor){
+							bgColor_html = `
+							<div class="flex-center mt6 right-bg-color">
+								<div class="layui-form">
+									<label class="layui-form-label layui-field-title">背景颜色</label>
+									<div class="layui-input-block">
+										<input type="checkbox" name="" lay-skin="switch" lay-filter="dragswitch" data-index="`+ index + `" data-name="bgcolor_on" lay-text="开启|关闭" ` + (val.bgcolor_on ? 'checked' : '') + `>
+									</div>
+								</div>
+								<div class="layui-form">
+									<div class="bgcolor-picker-box-` + assembly_id + `">
+										<div class="layui-input-inline w12">
+											<input type="text" value="` + val.bgcolor + `" placeholder="请选择背景颜色" class="layui-input color-picker-input" data-name="bgcolor" data-index="` + index + `">
+										</div>
+										<div class="layui-inline">
+											<div class="color-picker bgcolor-picker-` + assembly_id + `-` + index + `"></div>
+										</div>
+									</div>
+								</div>
+							</div>`;
+						}
+						//文字颜色
+						var fontColor_html = '';
+						if(val.color){
+							fontColor_html = `
+							<div class="mt6 right-font-color">
+								<label class="layui-form-label layui-field-title">颜色</label>
+								<div class="layui-input-block color-picker-box-` + assembly_id + `">
+									<div class="layui-input-inline w12">
+										<input type="text" value="` + val.color + `" placeholder="请选择文字颜色" class="layui-input color-picker-input" data-name="color" data-index="` + index + `">
+									</div>
+									<div class="layui-inline">
+										<div class="color-picker color-picker-` + assembly_id + `-` + index + `"></div>
+									</div>
+								</div>
+							</div>`;
+						}
+						//文字大小 
+						var fontSize_html = '';
+						if(val.size){
+							fontSize_html = `
+							<div class="mt6 right-font-size">
+								<label class="layui-form-label layui-field-title">大小</label>
+								<div class="layui-input-block">
+									<div class="layui-form flex-default flex-tc">
+										<input type="number" name="size" lay-verify="size" autocomplete="off" placeholder="文字大小" class="layui-input w12" value="` + val.size + `" data-index="` + index + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+										<p class="ml5">像素</p>
+									</div>
+								</div>
+							</div>`;
+						}
+						// 宽度
+						var width_html = '';
+						if(val.width){
+							width_html = `
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">宽度</label>
+								<div class="layui-input-block layui-input-block-m2">
+									<input type="text" name="width" data-index="` + index + `" lay-verify="width" autocomplete="off" placeholder="设置宽度" class="layui-input" value="` + val.width + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+								</div>
+							</div>`;
+						}
+						// 高度
+						var height_html = '';
+						if(val.height){
+							height_html = `
+							<div class="layui-form">
+								<label class="layui-form-label layui-field-title">高度</label>
+								<div class="layui-input-block">
+									<input type="text" name="height" data-index="` + index + `" lay-verify="height" autocomplete="off" placeholder="设置高度" class="layui-input" value="` + val.height + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+								</div>
+							</div>`;
+						}
+						// 选择表
+						var select_html = '';
+						select_html += `
+									<select name="" lay-filter="dict" data-index="` + index + `" type="list" lay-search>
+										<option value="">不显示</option>`;
+						$.each(dict_data, function(d_i, d_v){
+							select_html += `
+										<option value="` + d_v.table_name + `" ` + (d_v.table_name == val.dict_name ? 'selected' : '') + `>` + d_v.title + `</option>`;
+						})
+						select_html += `
+									</select>`;
+						var dict_html = `
+							<div class="layui-form-item">
+								<label class="layui-form-label">变量` + (index + 1) + `</label>
+								<div class="layui-input-block flex-default">
+									` + select_html + `
+									<div class="dict-table dict-table-list-` + assembly_id + `-` + index + `"></div>
+								</div>
+							</div>`;
+
+						var dis_html = `
+							<div class="layui-form flex-wrap dis-box">
+								<div class="flex-dis">
+									<label class="layui-form-label layui-field-title">距左</label>
+									<div class="layui-input-block layui-input-block-m2">
+										<input type="text" name="left" data-index="` + index + `" lay-verify="left" autocomplete="off" placeholder="向左距离" class="layui-input" value="` + val.left + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+									</div>
+								</div>
+								<div class="flex-dis">
+									<label class="layui-form-label layui-field-title">距上</label>
+									<div class="layui-input-block layui-input-block-m2">
+										<input type="text" name="top" data-index="` + index + `" lay-verify="top" autocomplete="off" placeholder="向上距离" class="layui-input" value="` + val.top + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+									</div>
+								</div>`;
+							if(val.right){
+								dis_html += `
+								<div class="flex-dis">
+									<label class="layui-form-label layui-field-title">距右</label>
+									<div class="layui-input-block layui-input-block-m2">
+										<input type="text" name="right" data-index="` + index + `" lay-verify="right" autocomplete="off" placeholder="向右距离" class="layui-input" value="` + val.right + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+									</div>
+								</div>`;
+							}
+							if(val.bottom){
+								dis_html += `
+								<div class="flex-dis">
+									<label class="layui-form-label layui-field-title">距下</label>
+									<div class="layui-input-block layui-input-block-m2">
+										<input type="text" name="bottom" data-index="` + index + `" lay-verify="bottom" autocomplete="off" placeholder="向下距离" class="layui-input" value="` + val.bottom + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+									</div>
+								</div>`;
+							}
+							dis_html += `
+							</div>`;
+						var seq_html = `
+							<div class="layui-form-item">
+								<label class="layui-form-label">排序` + (index + 1) + `</label>
+								<div class="layui-input-block">
+									<input type="number" name="seq" data-index="` + index + `" lay-verify="seq" autocomplete="off" placeholder="请输入排序" class="layui-input" value="` + val.seq + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+								</div>
+							</div>`;
+
+						if(assembly_type == '头部卡片'){
+							form_up_html += `
+							<div class="drag-piclist-item drag-piclist-item-n">
+								<div class="layui-form right-` + val.type + `">
+									<div>
+										<label class="layui-form-label layui-field-title">` + (val.name ? val.name : '变量' + (index + 1) ) + `</label>
+										<div class="layui-input-block flex-default">`;
+										if(val.type == 'logo'){
+											form_up_html += `
+											<div>
+												<select name="" lay-filter="dict-logo" data-index="` + index + `" data-key="value" type="` + val.type + `" lay-search>
+													<option value="不显示" ` + ((!val.dict_id && !val.img) ? 'selected' : '') + `>不显示</option>
+													<option value="会员头像" ` + (val.dict_id ? 'selected' : '') + `>会员头像</option>
+													<option value="品牌LOGO" ` + (val.img ? 'selected' : '') + `>品牌LOGO</option>
+												</select>
+											</div>
+											<div class="select-logo select-logo-` + assembly_id + `" style="display: ` + (val.dict_id ? 'block' : 'none') + `">` + select_html + `</div>`;
+										} else {
+											form_up_html += `
+											<div>` + select_html + `</div>`;
+										}
+										form_up_html += `
+											<div class="dict-table dict-table-list-` + assembly_id + `-` + index + `"></div>
+										</div>
+									</div>`;
+
+								if(val.type == 'logo'){
+									form_up_html += `
+									<div class="style-box-item default-logo default-logo-` + assembly_id + `" style="display: ` + (val.img ? 'block' : 'none') + `">
+										<div class="layui-input-block mt6 ">
+											<div class="drag-piclist-item">
+												<div>
+													<div class="flex-default drag-piclist-item drag-piclist-item-n drag-piclist-item-n-p">
+														<a href="javascript:;" class="flexImg list-img-btn logo-img btn-pic-upload-` + assembly_id + ` btn-pic-upload-` + assembly_id + `-1">
+															<img src="` + (val.img ? val.img : page[assembly_id].logoImg) + `" alt="">
+														</a>
+													</div>
+												</div>
+												<div class="style-layui-tips">
+													<p>建议尺寸：75 x 75像素</p>
+												</div>
+											</div>
+										</div>
+									</div>`;
+								}
+								if(val.type == 'cardnoImg' || val.type == 'logo'){
+									form_up_html += `
+									<div class="flex-center mt6">
+										` + width_html + `
+										` + height_html + `
+									</div>`;
+								}
+								form_up_html += `
+									<div class="mt6 layui-form-item">
+										` + dis_html + `
+									</div>
+									<div class="flex-center mt6 right-head-la">
+										` + title_html + `
+										<div class="layui-form-item">
+											<div class="flex-center">
+												<div class="layui-form">
+													<label class="layui-form-label layui-field-title">位置ID</label>
+													<div class="layui-input-block layui-input-block-m2">
+														<input type="number" name="siteID" data-index="` + index + `" lay-verify="width" autocomplete="off" placeholder="" class="layui-input" value="` + val.siteID + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="style-layui-tips">
+									<p>` + (val.type == 'vipGrad' ? '卡等级默认页面上不显示。卡等级必须设置，否则默认显示第一张背景图。' : '位置ID相同，则表示位置ID相同的几个参数在同一条平行线，默认以第一个位置ID显示位置') + `</p>
+									</div>
+									<div class="layui-form-item">
+										` + bgColor_html + `
+										` + fontColor_html + `
+										` + fontSize_html + `
+									</div>`;
+
+								form_up_html += `
+								</div>`;
+								// 删除
+								if(!val.type){
+								form_up_html += `
+									` + del_html + `
+								`;
+								}
+								
+								form_up_html += `
+							</div>`;
+						} else if(assembly_type == '魔方'){
+							form_up_html += `
+							<div class="drag-piclist-item drag-piclist-item-n">
+								` + up_img_html + `
+								<div class="layui-form mt6">
+									` + dict_html + `
+									` + title_html + `
+									` + url_html + `
+								</div>
+								` + del_html + `
+							</div>`;
+						} else if(assembly_type == '表单'){
+							form_up_html += `
+							<div class="drag-piclist-item drag-piclist-item-n">
+								<div class="layui-form">
+									` + dict_html + `
+									` + title_html + `
+									<div class="layui-form-item">
+										<label class="layui-form-label">修改` + (index + 1) + `</label>
+										<div class="layui-input-block">
+											<select name=""  type="form" data-index="` + index + `" data-key="edit" lay-filter="dict-logo">
+												<option value="Y" ` + (val.edit == 'Y' ? 'selected' : '') + `>可以修改</option>
+												<option value="N" ` + (val.edit == 'Y' ? '' : 'selected') + `>不可以修改</option>
+											</select>
+										</div>
+									</div>
+									` + seq_html + `
+								</div>
+								` + del_html + `
+							</div>`;
+						} else if(assembly_type == '数据列表'){
+							form_up_html += `
+							<div class="drag-piclist-item drag-piclist-item-n">
+								<div class="layui-form">
+									` + dict_html + `
+									<div class="layui-form-item">
+										` + dis_html + `
+									</div>	
+									<div class="layui-form-item">
+										` + width_html + `
+										` + fontColor_html + `
+										` + fontSize_html + `
+									</div>
+								</div>
+								` + del_html + `
+							</div>`;
+						} else if(assembly_type == '切换栏'){
+							form_up_html += `
+							<div class="drag-piclist-item drag-piclist-item-n">
+								<div class="layui-form">
+									` + title_html + `
+									<div class="layui-form-item layui-form-title">
+										<label class="layui-form-label">组件序号</label>
+										<div class="layui-input-block">
+											<input type="text" name="list_id" data-index="` + index + `" lay-verify="list_id" autocomplete="off" placeholder="请输入组件序号" class="layui-input" value="` + val.list_id + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+										</div>
+									</div>
+								</div>
+								` + del_html + `
+							</div>`;
+						} else if(assembly_type == '图片广告') {
+							form_up_html += `
+							<div class="flex-default drag-piclist-item drag-piclist-item-n">
+								` + up_img_html + `
+
+								<div class="layui-form">
+									` + url_html + `
+									` + seq_html + `
+								</div>
+								` + del_html + `
+							</div>`;
+						} else if(assembly_type == '红包组件'){
+							form_up_html += `
+							<div class="drag-piclist-item drag-piclist-item-n">
+								` + up_img_html + `
+							</div>`;
+						} else if(assembly_type == '好友瓜分'){
+							form_up_html += `
+							<div class="drag-piclist-item drag-piclist-item-n">
+								<div class="layui-form">
+									<div class="layui-form-item">
+										<div class="layui-field-title">` + val.name + ` 配置</div>
+									</div>	
+									<div class="layui-form-item">
+										` + dis_html + `
+									</div>
+									<div class="layui-form-item">
+										` + fontColor_html + `
+										` + fontSize_html + `
+									</div>
+								</div>
+							</div>`;
+						} else {
+							form_up_html += `
+							<div class="flex-default drag-piclist-item drag-piclist-item-n">
+								` + up_img_html + `
+
+								<div class="layui-form">
+									` + title_html + `
+									` + url_html + `
+								</div>
+								` + del_html + `
+							</div>`;
+						}
+					});
+					form_up_html += `
+					</div>`;
+				}
+
+				$("#drag-piclist-" + assembly_id).empty().append(form_up_html);
+
+				if(page[assembly_id].list && page[assembly_id].list.length > 0){
+					for(var p_i = 0; p_i < page[assembly_id].list.length; p_i ++){
+						if(page[assembly_id].list[p_i].dict_id){
+							dict_one(page[assembly_id].list[p_i].dict_name, assembly_id, p_i, 'list');
+						} 
+					}
+				}
+
+				if(assembly_type != '表单' && assembly_type != '公告' && assembly_type != '辅助空白'){
+					upload(assembly_type, assembly_id);
+				}
+			}
+		}
+		// 变量条件
+		function variableHtml(assembly_type, assembly_id){
+			var info_html = '';
+			if( assembly_type == page[assembly_id].tag ){
+				var key = 'infoList';
+				if(page[assembly_id][key] && page[assembly_id][key].length > 0){
+					info_html += `
+						<div class="layui-form">`;
+					$.each(page[assembly_id][key], function(index, val) {
+						info_html += `
+							<div class="drag-piclist-item-n">
+								<div>
+									<div class="layui-form-item">
+										<label class="layui-form-label layui-field-title">组件变量</label>
+										<div class="layui-input-block flex-default">
+											<select name="" lay-filter="dict" data-index="` + index + `" type="` + key + `" lay-search>
+												<option value="">不显示</option>`;
+												$.each(dict_data, function(d_i, d_v){
+													info_html += `
+												<option value="` + d_v.table_name + `" ` + (d_v.table_name == val.dict_name ? 'selected' : '') + `>` + d_v.title + `</option>`;
+												})
+												info_html += `
+											</select>
+											<div class="dict-table dict-table-` + key + `-` + assembly_id + `-` + index + `"></div>
+										</div>
+									</div>
+									<div class="layui-form-item">
+										<div class="flex-center">
+											<div>
+												<label class="layui-form-label layui-field-title">备注1</label>
+												<div class="layui-input-block flex-default">
+													<input type="text" name="condition1" data-index="` + index + `" data-key="` + key + `" lay-verify="condition1" autocomplete="off" placeholder="请输入备注1" class="layui-input" value="` + val.condition1 + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+												</div>
+											</div>
+											<div>
+												<label class="layui-form-label layui-field-title">备注2</label>
+												<div class="layui-input-block flex-default">
+													<input type="text" name="condition2" data-index="` + index + `" data-key="` + key + `" lay-verify="condition2" autocomplete="off" placeholder="请输入备注2" class="layui-input" value="` + val.condition2 + `" oninput="inputOn(this, ` + assembly_id + `, '` + assembly_type + `');">
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="drag-hidden">
+									<div class="drag-close" onclick="del_drag(this, '` + assembly_type + `', ` + assembly_id + `, ` + index + `, '` + key + `');"><img src="../_public/images/icon-close.png" alt="删除"></div>
+								</div>
+							</div>`;
+					});	
+					info_html += `
+						</div>
+						<div style="text-align:center;margin-top:20px;" onclick="variable_add('` + assembly_type + `', ` + assembly_id + `, '` + key + `');">
+							<button type="button" class="layui-btn layui-btn-success"><i class="layui-icon layui-icon-add-1"></i> 新增</button>
+						</div>`;
+
+					$("#variable-" + assembly_id).empty().append(info_html);
+
+					for(var p_i = 0; p_i < page[assembly_id][key].length; p_i ++){
+						if(page[assembly_id][key][p_i].dict_id){
+							dict_one(page[assembly_id][key][p_i].dict_name, assembly_id, p_i, key);
+						} 
+					}
+				}
+			}
+		}
+		// 上传图片
+		function upload(assembly_type, assembly_id){
+			crm._upload('.btn-pic-upload-' + assembly_id, param_upload, function(that, res){
+				var imgSrc = crm.domain_name + res.data.infos.file.src;
+				var class_name = that.item.context.className.trim().split(" ");
+				var class_name_n = class_name[class_name.length - 1].trim().split("-");
+				var u_i = class_name_n[class_name_n.length - 1];
+
+				// 背景图
+				if(class_name.indexOf('bgList-img-btn') != -1){
+					page[assembly_id].bgList[u_i].img = imgSrc;
+					page[assembly_id].bgList[u_i].up_status = 'new';
+					$(".bgList-img-btn." + class_name[class_name.length - 1]).find('img').attr('src', imgSrc);
+				} 
+				// 列表图片
+				else if(class_name.indexOf('list-img-btn') != -1){
+					// 头部卡片
+					if(class_name.indexOf('logo-img') != -1){
+						for(var i = 0; i < page[assembly_id].list.length; i++){
+							if(page[assembly_id].list[i].type == 'logo'){
+								page[assembly_id].list[i].img = imgSrc;
+							}
+						}
+					} else {
+						page[assembly_id].list[u_i].img = imgSrc;
+						page[assembly_id].list[u_i].up_status = 'new';
+					}
+
+					$(".list-img-btn." + class_name[class_name.length - 1]).find('img').attr('src', imgSrc);
+				}
+				pageHtml(assembly_type, assembly_id);
+			})
+		}
+		function addPlus(obj, assembly_id, assembly_type){
+			var len = page[assembly_id].coupon.length;
+			var coupon_obj = { id: '', title: ''};
+			page[assembly_id].coupon.push(coupon_obj)
+			var add_plus_html = `
+				<div class="add-plus-area re">
+					<div class="add-plus-in">
+						<select lay-filter="dict-logo" type="redpaper_coupon" data-index="` + len + `" data-key="id" class="activity_lottery_` + assembly_id + `_` + len + `"></select>
+					</div>
+					<div class="add-plus" onclick="delPlus(this, ` + assembly_id + `, '` + assembly_type + `');">-</div>
+				</div>`;
+			$(obj).parent().append(add_plus_html);
+			layui.use('form', function(){
+				var form = layui.form;
+				form.render('select');
+				activity_lottery(assembly_type, assembly_id);
+			});
+		}
+		function delPlus(obj, assembly_id, assembly_type){
+			var index = $(obj).parent().index();
+			$(obj).parent().remove();
+			page[assembly_id].coupon.splice(index, 1)
+			layui.use('form', function(){
+				var form = layui.form;
+				form.render('select');
+				activity_lottery(assembly_type, assembly_id);
+			});
+		}
+		// 新增变量
+		function variable_add(assembly_type, assembly_id, key){
+			var push_obj = { 
+				condition1: '', 
+				condition2: '', 
+				dict_id: '', 
+				dict_text: '', 
+				dict_name: '', 
+			};
+			page[assembly_id][key].push(push_obj);
+			if(key == 'infoList'){
+				variableHtml(assembly_type, assembly_id);
+			}
+			layui.use('form', function(){
+				var form = layui.form;
+				form.render();
+			});
+		}
+		// 新增图片
+		function pic_add(assembly_type, assembly_id){
+			if(assembly_type == '图片广告'){
+				if(page[assembly_id].list.length >= 20){
+					layui.use('layer', function(){
+						layer.msg("最多可以添加20张图片~");
+					})
+					return false;
+				}
+			}
+			var push_obj = {
+				img: crm.default_img,
+				title: '',
+				path: '',
+				appid: '',
+				value: '',
+			}
+			if(assembly_type == '表单'){
+				push_obj = {
+					title: '标题',
+					type: 'input',
+					edit: 'Y',
+				}
+			}
+			if(assembly_type == '图片广告' || assembly_type == '表单'){
+				push_obj.seq = page[assembly_id].list.length + 1;
+			}
+			if(assembly_type == '魔方' || assembly_type == '表单'){
+				push_obj.dict_id = '';
+				push_obj.dict_text = '';
+				push_obj.dict_name = '';
+			}
+			if(assembly_type == '头部卡片'){
+				var len = parseInt(page[assembly_id].list.length) + 1;
+				push_obj = {
+					siteID: String(len),
+					title: '',
+					dict_id: '',
+					dict_text: '',
+					dict_name: '',
+					left: '20%',
+					top: '20%',
+					name: 'name' + len,
+					color: '#000000', 
+					size: 14, 
+					bgcolor: "#ffffff", 
+					bgcolor_on: false,
+				}
+			}
+			if(assembly_type == '数据列表'){
+				push_obj = {
+					dict_id: '',
+					dict_text: '',
+					dict_name: '',
+					// path: '',
+					// appid: '',
+					// value: '',
+					color: '#333333',
+					size: 12,
+					left: '10%',
+					top: '15%',
+					width: 'auto',
+				}
+			} 
+			if(assembly_type == '切换栏'){
+				push_obj = {
+					title: '',
+					list_id: '',
+				}
+			}
+			page[assembly_id].list.push(push_obj);
+			form_up(assembly_type, assembly_id);
+			pageHtml(assembly_type, assembly_id);
+
+			crm.scroll_b($(".style-box-" + assembly_id).find(".drag-write-style"));
+			layui.use('form', function(){
+				var form = layui.form;
+				form.render();
+			});
+			// 颜色选择器
+			if(assembly_type == '头部卡片' || assembly_type == '数据列表'){
+				layui.use('colorpicker', function(){
+					var colorpicker = layui.colorpicker;
+					colorelemArr.map(function(item, index) {
+						for (var j = 0; j < $(item.key + "box-" + assembly_id).length; j++) {
+							color_func(assembly_type, assembly_id, j, item.key);
+						}
+					})
+				});
+			}
+		}
+		// 删除
+		function del_drag(obj, assembly_type, assembly_id, idx, key){
+			layer.confirm('确定删除吗？', { title: '温馨提示', }, function(index){
+				if(idx == 'assembly'){
+					$("#pro_div_" + assembly_id).remove();
+					$(".style-box-" + assembly_id).remove();
+					page.splice(assembly_id, 1);
+				} else{
+					if(key){
+						if(page[assembly_id][key].length < 2){
+							layer.msg('请至少保留一项~');
+							return false;
+						}
+						page[assembly_id][key].splice(idx, 1);
+						if(key == 'infoList'){
+							variableHtml(assembly_type, assembly_id);
+						} else {
+							form_up(assembly_type, assembly_id);
+							pageHtml(assembly_type, assembly_id);
+						}
+						var form = layui.form;
+						form.render();
+					}
+				}
+
+				layer.close(index);
+			})
+		}
+
+		function view_style_div(assembly_type, obj){
+			var assembly_id = obj.id.split('pro_div_')[1];
+			$(".style-box-group").hide();
+			$(".style-box-group.style-box-" + assembly_id).show();
+			// var pro_divs = document.getElementsByName('pro-div');
+			// for (var i = 0; i < pro_divs.length; i++) {
+			// 	pro_divs[i].style.border = '0.5px dashed #f7f7f7';
+			// }
+			// obj.style.border = '1px solid #8bc34a';
+			// $('.design-preview .drag-hidden').hide();
+			// $(obj).children('.drag-hidden').show();
+			$(".drag-re").removeClass('active');
+			$(obj).addClass('active');
+
+			for (var i = 0; i < static_data.length; i++) {
+				if(assembly_type == static_data[i].tag){
+					layui.use(['element', 'slider', 'form', 'carousel', 'colorpicker', 'upload', 'layedit'], function(){
+						var $ = layui.$,
+							element = layui.element,
+							slider = layui.slider,
+							form = layui.form,
+							carousel = layui.carousel,
+							colorpicker = layui.colorpicker,
+							upload = layui.upload,
+							layedit = layui.layedit;
+						var slider_li = {
+							mingap: 1, 
+							maxgap: 10, 
+						};
+						if(assembly_type == '辅助空白'){
+							slider_li.maxgap = 100;
+						} else if(assembly_type == '积分兑券' || assembly_type == '数据列表'){
+							slider_li.maxgap = 40;
+						}
+						// 滑块
+						if(page[assembly_id].defaultgap){
+							slider.render({
+								elem: '#drag-pic-s-' + assembly_id,
+								min: slider_li.mingap, //最小值
+								max: slider_li.maxgap, //最大值
+								value: page[assembly_id].defaultgap, //默认值
+								input: true,
+								theme: '#8BC34A',
+								change: function(value){
+									page[assembly_id].defaultgap = value
+									pageHtml(page[assembly_id]['tag'], assembly_id);
+								}
+							})
+						}
+						// 上传音频
+						upload.render({
+							elem: '#audio-' + assembly_id,
+							url: '', 
+							accept: 'audio',
+							done: function(res){
+								layer.msg('上传成功');
+							}
+						});
+
+						// 颜色选择器
+						if(assembly_type == '数据列表' || assembly_type == '好友瓜分'){
+							colorMap2(assembly_type, assembly_id);
+						} else {
+							colorMap(assembly_type, assembly_id);
+						}
+						form.render();
+
+						//监听开关	
+						form.on('switch(dragswitch)', function(obj){
+							console.log(obj)
+							var key = obj.elem.dataset.name;
+							console.log(key)
+							if(obj.elem.dataset.index != 'undefined' && obj.elem.dataset.index != undefined){
+								page[assembly_id].list[obj.elem.dataset.index][key] = this.checked;
+							} else {
+
+								if(assembly_type == '数据列表' && key == 'tab_show'){
+									page[assembly_id].list[0][key] = this.checked;
+								} else {
+									page[assembly_id][key] = this.checked;
+								}
+							}
+							pageHtml(page[assembly_id].tag, assembly_id);
+							// rightHtml(page[assembly_id].tag, assembly_id);
+
+							// form.render();
+						});
+
+						// 监听复选框
+						form.on('checkbox(choiceCheck)', function(data){
+							for(k in page[assembly_id]){
+								var name = data.elem.dataset.name;
+								if( k == data.elem.dataset.name ){
+									page[assembly_id][k] = data.elem.checked;
+
+									if(data.elem.checked){
+										page[assembly_id][k] = data.value;
+									} else {
+										page[assembly_id][k] = '';
+									}
+
+									pageHtml(page[assembly_id].tag, assembly_id);
+								}
+							}
+						});
+						// 监听单选框
+						form.on('radio(choiceRadio)', function(data){
+							var value = data.value;
+							console.log(data.elem.dataset.name)
+							for(k in page[assembly_id]){
+								if( k == data.elem.dataset.name ){
+									page[assembly_id][k] = value;
+									pageHtml(assembly_type, assembly_id);
+								}
+							}
+							// if(data.value == '品牌LOGO'){
+							// 	$(".default-logo-" + assembly_id).show();
+							// } else {
+							// 	$(".default-logo").hide();
+							// }
+						});
+						// 监听下拉框
+						form.on('select(dict)', function(data) {
+							var index = $(data.elem).attr("data-index");
+							var key = $(data.elem).attr("type");
+							var item = page[assembly_id][key][index];
+							item.dict_name = data.value;
+							item.dict_id = '';
+							item.dict_text = '';
+
+							if(data.value == '' || data.value == '不显示'){
+								$(".dict-table-" + key + '-' + assembly_id + '-' + index).empty().hide();
+								pageHtml(assembly_type, assembly_id);
+							} else {
+								dict_one(data.value, assembly_id, index, key);
+							}
+
+						});
+						form.on('select(dict-table)', function(data) {
+							var key = $(data.elem).attr("type");
+							var two_val = data.value;
+							var two_txt = data.elem[data.elem.selectedIndex].text;
+							var index = $(data.elem).attr("data-index");
+							page[assembly_id][key][index].dict_id = two_val;
+							page[assembly_id][key][index].dict_text = two_txt;
+							pageHtml(assembly_type, assembly_id);
+						});
+						form.on('select(dict-logo)', function(data) {
+							var type = $(data.elem).attr("type");
+							var index = $(data.elem).attr("data-index");
+							var key = $(data.elem).attr("data-key");
+							var value = data.value;
+							if(index){
+								if(type == 'redpaper_coupon'){
+									page[assembly_id].coupon[index][key] = value;
+								} else {
+									page[assembly_id].list[index][key] = value;
+								}
+							} else {
+								page[assembly_id][key] = value;
+							}
+							// 头部卡片
+							if (type == 'logo'){
+								if(value == '会员头像'){
+									page[assembly_id].list[index].img = '';
+									$(".default-logo").hide();
+									$(".select-logo-" + assembly_id).show();
+								} else {
+									$(".select-logo").hide();
+									$(".dict-table-" + key + '-' + assembly_id + '-' + index).hide();
+									$(".default-logo").hide();
+									page[assembly_id].list[index].img = '';
+									page[assembly_id].list[index].dict_id = '';
+									page[assembly_id].list[index].dict_text = '';
+									page[assembly_id].list[index].dict_name = '';
+									if (value == '品牌LOGO'){
+										$(".default-logo-" + assembly_id).show();
+									}
+								}
+							} 
+							// 红包组件
+							if(type == 'redpaper' || type == 'redpaper_activity'){
+								rightHtml(assembly_type, assembly_id);
+								form.render();
+								fun_lottery(assembly_type, assembly_id);
+								if(page[assembly_id].red_type == 'wheel'){
+									if(type == 'redpaper_activity'){
+										activity_lottery_fun(assembly_type, assembly_id);
+									} else {
+										activity_lottery(assembly_type, assembly_id);
+									}
+								}
+							}
+							
+							pageHtml(assembly_type, assembly_id);
+						});
+
+						var search_list = {
+							isactive: 'Y',
+						};
+						if(assembly_type == '头部卡片'){
+							if(vip_grade.length < 1 && page[assembly_id].bgList){
+								portalAjax({table_name: 'CRM_RULE_VIP_GRADE', data_list: 'Y', search_list, }, function(res){
+									console.log(res)
+									var bglist = [];
+									res.list.map(function(item, index) {
+										var obj = {
+											name: item.name,
+											id: item.id,
+											upper_grade_id: item.upper_grade_id,
+											img: crm.app_local + '/_public/images/pic-default.jpg',
+										};
+
+										if(page[assembly_id].bgList[index]){
+											if(page[assembly_id].bgList[index].img){
+												obj.img = page[assembly_id].bgList[index].img;
+											} 
+										} 
+										bglist.push(obj)
+									})
+									page[assembly_id].bgList = bglist;
+									rightHtml(assembly_type, assembly_id);
+
+									// 颜色选择器
+									colorMap(assembly_type, assembly_id);
+									form.render();
+								})
+							}
+						}
+
+						if(assembly_type == '红包组件'){
+							if(red_lottery.length < 1){
+								portalAjax({table_name: 'CRM_PROMO_LOTTERY', data_list: 'Y', }, function(res){
+									red_lottery = res.list;
+									fun_lottery(assembly_type, assembly_id);
+								})
+							} else {
+								fun_lottery(assembly_type, assembly_id);
+							}
+							// 大转盘
+							if(page[assembly_id].red_type == 'wheel'){
+								if(wheel_red_lottery.length < 1){
+									activity_lottery_fun(assembly_type, assembly_id);
+								} else {
+									activity_lottery(assembly_type, assembly_id);
+								}
+							}
+						}
+						if(assembly_type == '好友瓜分'){
+							if(carveup_lottery.length < 1){
+								portalAjax({table_name: 'CRM_PROMO_TEAMBUY', data_list: 'Y', }, function(res){
+									carveup_lottery = res.list;
+									fun_lottery(assembly_type, assembly_id);
+								})
+							} else {
+								fun_lottery(assembly_type, assembly_id);
+							}
+						}
+					});
+				}
+			}
+		}
+
+		// 颜色选择器
+		function colorMap(assembly_type, assembly_id){
+			colorelemArr.map(function(item, index) {
+				for (var j = 0; j < $(item.key + "box-" + assembly_id).length; j++) {
+					$(item.key + "box-" + assembly_id).eq(j).find('.color-picker').addClass('color-picker-'+ assembly_id +'-'+ j);
+					color_func(assembly_type, assembly_id, j, item.key);
+				}
+			})
+		}
+		function colorMap2(assembly_type, assembly_id){
+			colorelemArr.map(function(item, index) {
+				for (var j = 0; j < $(item.key + "box-" + assembly_id).length; j++) {
+					color_func(assembly_type, assembly_id, j, item.key);
+				}
+			})
+		}
+
+		function portalAjax(obj, callback){
+			crm.post(crm.api_local + '/Portal/index', obj, function(res) {
+				callback(res);
+			})
+		}
+		function fun_lottery(assembly_type, assembly_id){
+			layui.use(['element', 'form'], function(){
+				var $ = layui.$,
+					element = layui.element,
+					form = layui.form;
+				var html = '';
+				html += `
+					<option value="">请选择</option>`;
+				var funList = red_lottery;
+				var classDiv = '.red_lottery_' + assembly_id;
+				if(assembly_type == '好友瓜分'){
+					funList = carveup_lottery;
+					classDiv = '.carveup_lottery_' + assembly_id;
+				}
+				$.each(funList, function(s_i, s_v){
+					html += `
+					<option value="` + s_v.id + `" ` + ((page[assembly_id].activity_id == s_v.id) ? 'selected' : '') + `>` + s_v.title + `</option>`;
+				})
+				console.log(classDiv)
+				$(classDiv).empty().append(html);
+				form.render('select');
+			})
+		}
+		// 大转盘优惠券组
+		function activity_lottery_fun(assembly_type, assembly_id){
+			var search_list = {crm_promo_lottery_id: page[assembly_id].activity_id};
+			portalAjax({table_name: 'CRM_PROMO_LOTTERY_COUPON', data_list: 'Y', search_list, }, function(res){
+				wheel_red_lottery = res.list;
+				activity_lottery(assembly_type, assembly_id);
+			})
+		}
+		function activity_lottery(assembly_type, assembly_id){
+			layui.use(['element', 'form'], function(){
+				var $ = layui.$,
+					element = layui.element,
+					form = layui.form;
+
+				$.each(page[assembly_id].coupon, function(c_i, c_v){
+					var html = '';
+					html += `
+						<option value="">请选择</option>`;
+					var classDiv = '.activity_lottery_' + assembly_id + '_' + c_i;
+					$.each(wheel_red_lottery, function(s_i, s_v){
+						var id = s_v.crm_coupon_id;
+						html += `
+						<option value="` + id + `" ` + ((c_v.id == id) ? 'selected' : '') + `>` + id + `</option>`;
+					})
+					$(classDiv).empty().append(html);
+				});
+				form.render('select');
+			})
+		}
+
+		function fun_grade(assembly_type, assembly_id){
+			layui.use(['element', 'form'], function(){
+				var $ = layui.$,
+					element = layui.element,
+					form = layui.form;
+				var html = '';
+				html += `
+					<option value="">请选择</option>`;
+				var funList = red_lottery;
+				var classDiv = '.red_lottery_' + assembly_id;
+				if(assembly_type == '好友瓜分'){
+					funList = carveup_lottery;
+					classDiv = '.carveup_lottery_' + assembly_id;
+				}
+				$.each(funList, function(s_i, s_v){
+					html += `
+					<option value="` + s_v.id + `" ` + ((page[assembly_id].activity_id == s_v.id) ? 'selected' : '') + `>` + s_v.title + `</option>`;
+				})
+				console.log(classDiv)
+				$(classDiv).empty().append(html);
+			})
+		}
+
+
+		// 选择颜色
+		function color_func(assembly_type, assembly_id, j, classElem) {
+			var className = $(classElem + 'box-' + assembly_id);
+			layui.use(['colorpicker'], function(){
+				var colorpicker = layui.colorpicker;
+				colorpicker.render({
+					elem: classElem + assembly_id +'-'+ j,
+					color: className.eq(j).find('.color-picker-input').val(),
+					change: function(color){
+						console.log(this)
+						$(this.elem).parent().parent().find('.color-picker-input').val(color);
+						var colorpicker_key = $(this.elem).parent().parent().find('.color-picker-input').attr('data-name');
+						if(assembly_type == '头部卡片' || assembly_type == '数据列表' || assembly_type == '好友瓜分'){
+							var color_index = $(this.elem).parent().parent().find('.color-picker-input').attr('data-index');
+							
+							page[assembly_id].list[color_index][colorpicker_key] = color;
+							pageHtml(page[assembly_id]['tag'], assembly_id);
+						} else {
+							for(k in page[assembly_id]){
+								if( k == colorpicker_key ){
+									page[assembly_id][k] = color;
+									pageHtml(page[assembly_id]['tag'], assembly_id);
+								}
+							}
+						}
+					}
+				});
+			});
+		}
+		// 热区切图-绘制热区
+		function cutawayClick(assembly_id){
+			cutawayHtml(assembly_id);
+
+			layer.open({
+				type: 1,
+				title: '绘制热区',
+				moveType: 1, //拖拽模式，0或者1
+				content: $('#hot-region'),
+				area: [ '1100px', '560px'],
+				shade: 0,
+				maxmin: false,
+				resize: false,
+				move: false,
+			});
+		}
+		function cutawayHtml(assembly_id){
+			hot_i = page[assembly_id].list.length;
+			hot_arr = page[assembly_id].list;
+			console.log(hot_arr)
+			
+			var hot_list = [];
+			var html = '';
+			html += `
+				<div id="hot-region-` + assembly_id + `">
+					<div class="hot-region-b">
+						<div class="hot-left">
+							<div class="hot-region-box">
+								<div class="hot-region-pic"><img src="` + (page[assembly_id].bg || page[assembly_id].bgList[0].img) + `" alt=""></div>
+								<div class="hot-moves" id="hot-moves">`;
+								if(hot_i > 0){
+									hot_list = page[assembly_id].list;
+									for(var i = 1; i <= hot_i; i++){
+										html += `
+									<div class="hot-move-item" id="odiv_` + i + `" style="width: ` + hot_list[i-1].width + `;height: ` + hot_list[i-1].height + `;left: ` + hot_list[i-1].left + `;top: ` + hot_list[i-1].top +`;">
+										<div class="hot-region-des">热区` + i + `</div>
+										<div class="hot-region-close" onclick="del_hot(` + assembly_id + `, ` + i + `)"><img src="../_public/images/icon-close.png" alt="删除组件"></div>
+										<span class="r"></span>
+										<span class="l"></span>
+										<span class="t"></span>
+										<span class="b"></span>
+										<span class="br"></span>
+										<span class="bl"></span>
+										<span class="tr"></span>
+										<span class="tl"></span>
+										<div class="inner"></div>
+									</div>`;
+									};
+								};
+								html += `
+								</div>
+							</div>
+						</div>
+						<div class="hot-right">
+							<div class='hot-right-b'>
+								<div class="layui-btn-container">
+									<a class="layui-btn layui-btn-new" onclick="addRegion(` + assembly_id + `);">添加热区</a>
+									<a class="layui-btn layui-btn-primary" onclick="removeRegion(` + assembly_id + `);">清空热区</a>
+								</div>
+								<div class="hot-area" id="hot-area">`;
+								if(hot_i > 0){
+									for(var i = 1; i <= hot_i; i++){
+									html += `
+									<div class="layui-form-item hot-area-item" id="hot_form_` + i + `">
+										<label class="layui-form-label">热区` + i + `</label>
+										<div class="layui-input-block">
+											<input type="text" name="url" value="` + (hot_list[i-1].value ? hot_list[i-1].value : (hot_list[i-1].path ? (crm.other_app + hot_list[i-1].path) : '')) + `" lay-verify="url" autocomplete="off" placeholder="请选择链接" class="layui-input" data-index="` + (i - 1) + `" data-appid="` + hot_list[i-1].appid + `" onFocus="inputFocus(event, this, ` + assembly_id + `, 'hot');">
+										</div>
+									</div>`;
+									};
+								};
+								html += `
+								</div>
+								<!--<div class="hot-b-btn">
+									<button type="button" class="layui-btn layui-btn-primary" onclick="cancelRegion();">取消</button>
+									<button type="button" class="layui-btn layui-btn-new" onclick="submitRegion(` + assembly_id + `);">确定</button>
+								</div>-->
+							</div>
+						</div>
+					</div>
+				</div>`;
+			$('#hot-region').empty().append(html);
+			if(hot_i > 0){
+				for(var j = 1; j <= hot_i; j++){
+					var oDiv = document.getElementById("odiv_" + j);
+					var aSpan = oDiv.getElementsByTagName('span');
+					for (var i = 0; i < aSpan.length; i++) {
+						dragFn(aSpan[i], oDiv, assembly_id);
+					}
+					dragFnP(oDiv, assembly_id, '热区切图');
+				}
+			}
+		}
+		// 添加热区
+		function addRegion(assembly_id){
+			hot_i ++ ;
+			if(hot_i > 10){
+				layui.use('layer', function(){
+					layer.msg("最多添加十个热区")
+				})
+				return false;
+			}
+
+			var hotm_html = '';
+			var right_html = '';
+			hotm_html += `
+				<div class="hot-move-item" id="odiv_` + hot_i + `">
+					<div class="hot-region-des">热区` + hot_i + `</div>
+					<div class="hot-region-close" onclick="del_hot(` + assembly_id + `, ` + hot_i + `)"><img src="../_public/images/icon-close.png" alt="删除组件"></div>
+					<span class="r"></span>
+					<span class="l"></span>
+					<span class="t"></span>
+					<span class="b"></span>
+					<span class="br"></span>
+					<span class="bl"></span>
+					<span class="tr"></span>
+					<span class="tl"></span>
+					<div class="inner"></div>
+				</div>`;
+			$("#hot-moves").append(hotm_html);
+
+			right_html += `
+				<div class="layui-form-item hot-area-item" id="hot_form_` + hot_i + `">
+					<label class="layui-form-label">热区` + hot_i + `</label>
+					<div class="layui-input-block">
+						<input type="text" name="url" lay-verify="url" autocomplete="off" placeholder="请选择链接" data-index="` + (hot_i - 1) + `" class="layui-input" data-appid="" onFocus="inputFocus(event, this, ` + assembly_id + `, 'hot');">
+					</div>
+				</div>`;
+			$("#hot-area").append(right_html);
+
+			$("#odiv_" + hot_i).css({
+				"width": "122px",
+				"left": (90 + hot_i * 10) + 'px',
+				"zIndex": hot_i + 4,
+			});
+			var oDiv = document.getElementById("odiv_" + hot_i);
+			var aSpan = oDiv.getElementsByTagName('span');
+			for (var i = 0; i < aSpan.length; i++) {
+				dragFn(aSpan[i], oDiv, assembly_id);
+			}
+			dragFnP(oDiv, assembly_id, '热区切图');
+
+			hot_arr[hot_i - 1] = {
+				parent_id: assembly_id,
+				id: hot_i - 1,
+				appid: '',
+				path: '',
+				value: '',
+				left: $("#odiv_" + hot_i).css('left'),
+				top: $("#odiv_" + hot_i).css('top'),
+				width: $("#odiv_" + hot_i).css('width'),
+				height: $("#odiv_" + hot_i).css('height'),
+			}
+
+			crm.scroll_b($("#hot-area"));
+		}
+		function dragFn(obj, oDiv, assembly_id) {
+			var o_i = oDiv.id.split('odiv_')[1];
+
+			obj.onmousedown = function (ev) {
+				var oEv = ev || event;
+				oEv.stopPropagation();
+				var w_t = ($("body").width() - $("#hot-region").parent().width()) / 2;
+
+				var oldWidth = oDiv.offsetWidth;
+				var oldHeight = oDiv.offsetHeight;
+				var oldX = oEv.clientX;
+				var oldY = oEv.clientY;
+				var oldLeft = oDiv.offsetLeft;
+				var oldTop = oDiv.offsetTop;
+
+				var imgWidth = $("#hot-region-" + assembly_id).find(".hot-region-pic").width();
+				var imgHeight = $("#hot-region-" + assembly_id).find(".hot-region-pic").height();
+
+					document.onmousemove = function (ev) {
+						var oEv = ev || event;
+						let disX = (oldLeft + (oEv.clientX - oldLeft)) - w_t,
+							disY = (oldTop + (oEv.clientY - oldY))
+							clientX = oEv.clientX,
+							clientY = oEv.clientY;
+						
+						var w = oldWidth - (clientX - oldX);
+						var h = oldHeight - (clientY - oldY);
+
+						if(disX < 0){
+							disX = 0;
+						}
+						if(disY < 0){
+							disY = 0;
+						}
+						if(disX == 0){
+							if(clientX < w_t){
+								clientX = w_t;
+							}
+							if(oldX > w_t){
+								oldX = w_t;
+							}
+							w = oldWidth - (clientX - oldX) + oldLeft;
+						}
+						if(obj.className == 'tr' || obj.className == 'br' || obj.className == 'r'){
+							disX = oldLeft;
+							w = oldWidth + (clientX - oldX);
+						}
+						if(obj.className == 'b' || obj.className == 'l' || obj.className == 'r'){
+							disY = oldTop;
+						}
+						if(obj.className == 'bl' || obj.className == 'br' || obj.className == 'b'){
+							h = oldHeight + (clientY - oldY);
+						}
+						if(obj.className == 't' || obj.className == 'b'){
+							disX = oldLeft;
+							w = oldWidth;
+						}
+						if(obj.className == 'l' || obj.className == 'r'){
+							h = oldHeight;
+						}
+						if( w > imgWidth - disX){
+							w = imgWidth - disX;
+						}
+						if( h > imgHeight - disY){
+							h = imgHeight - disY;
+						}
+						
+						oDiv.style.width = w + 'px';
+						oDiv.style.height = h + 'px';
+						oDiv.style.left = disX + 'px';
+						oDiv.style.top = disY + 'px';
+
+						hot_arr[o_i - 1].width = w + 'px';
+						hot_arr[o_i - 1].height = h + 'px';
+						hot_arr[o_i - 1].left = disX + 'px';
+						hot_arr[o_i - 1].top = disY + 'px';
+                    };
+
+				document.onmouseup = function () {
+					document.onmousemove = null;
+				};
+				return false;
+			};
+		}
+		function dragFnP(oDiv, assembly_id, assembly_type){
+			var o_i = '';
+			oDiv.onmousedown = function (ev) {
+				var oevent = ev || event;
+				oevent.preventDefault();
+				var distanceX = oevent.clientX - oDiv.offsetLeft;
+				var distanceY = oevent.clientY - oDiv.offsetTop;
+				var oldWidth = oDiv.offsetWidth;
+				var oldHeight = oDiv.offsetHeight;
+				var imgWidth = $(".hot-region-pic").width();
+				var	imgHeight = $(".hot-region-pic").height();
+				document.onmousemove = function (ev) {
+					var oevent = ev || event;
+					var left = oevent.clientX - distanceX;
+					var top = oevent.clientY - distanceY;
+					var height = $(oDiv).height();
+
+					if(left < 0){
+						left = 0
+					}
+					if(top < 0){
+						top = 0
+					}
+					if( assembly_type == '热区切图' ){
+						if(left > imgWidth - oldWidth){
+							left = imgWidth - oldWidth;
+						}
+						if(top > imgHeight - oldHeight && top > 0){
+							top = imgHeight - oldHeight;
+						}
+						if(top > imgHeight - oldHeight && top > 0){
+							top = imgHeight - oldHeight;
+						}
+						if(height > imgHeight){
+							height = imgHeight;
+						}
+					}
+
+					oDiv.style.left = left  + 'px';
+					oDiv.style.top = top + 'px';
+					oDiv.style.height = height + 'px';
+
+					if(oDiv.id.split('odiv_')[1]){
+						o_i = oDiv.id.split('odiv_')[1];
+						hot_arr[o_i - 1].left = left + 'px';
+						hot_arr[o_i - 1].top = top + 'px';
+					}
+					if(assembly_type == '头部卡片'){
+						var name = oDiv.getAttribute("name");
+						$.each(page[assembly_id].list, function(index, val){
+							var page_w = $("#pro_div_" + assembly_id).width();
+							var page_h = $("#pro_div_" + assembly_id).height();
+							if(val.name == name){
+								val.left = (left/page_w * 100).toFixed(2) + '%';
+								val.top = (top/page_h * 100).toFixed(2) + '%';
+							}
+						})
+						for(var p_i = 0; p_i < page[assembly_id].list.length; p_i ++){
+							if(page[assembly_id].list[p_i].dict_id){
+								dict_one(page[assembly_id].list[p_i].dict_name, page[assembly_id].assembly_id, p_i, 'list');
+							} 
+						}
+
+						rightHtml(assembly_type, assembly_id);
+					}
+				};
+				document.onmouseup = function () {
+					document.onmousemove = null;
+					document.onmouseup = null;
+				};
+			}
+		}
+		// 清空热区
+		function removeRegion(assembly_id){
+			hot_i = 0;
+			// hot_arr = [];
+			page[assembly_id].list = [];
+			cutawayHtml(assembly_id);
+			$("#hot-moves").remove();
+			$("#hot-area").remove();
+		}
+		// 删除热区
+		function del_hot(assembly_id, i){
+			layer.confirm('确定要删除该热区吗？', { title: '温馨提示', }, function(index){
+				$("#odiv_" + i).remove();
+				$("#hot_form_" + i).remove();
+				layer.close(index);
+				hot_i --;
+				hot_arr.splice(i - 1, 1);
+				cutawayHtml(assembly_id);
+			})
+		}
+		// 热区切图取消
+		function cancelRegion(){
+			hot_i = 0;
+			hot_arr = [];
+			layer.closeAll();
+		}
+		// 热区切图提交
+		function submitRegion(assembly_id) {
+			page[assembly_id].list = hot_arr;
+			hot_i = 0;
+			hot_arr = [];
+			layer.closeAll();
+		}
+		// 输入标题链接
+		function inputOn(obj, assembly_id, assembly_type){
+			var value = $(obj).val();
+			var key = $(obj).attr('name');
+			var only = $(obj).attr('data-only');
+			if(only){
+				if(only == 'only'){
+					page[assembly_id][key] = value;
+				} else if(only == 'info'){
+					page[assembly_id][only][key] = value;
+				} 
+			} else {
+				var index = $(obj).attr('data-index');
+				var arrKey = $(obj).attr('data-key');
+				if( !arrKey ){
+					arrKey = 'list';
+				} 
+				page[assembly_id][arrKey][index][key] = value;
+			}
+			pageHtml(assembly_type, assembly_id);
+		}
+		function inputFocus(e, obj, assembly_id, type){
+			var obj_i = $(obj).data('index');
+			window.parent._admin = obj;
+
+			layer.open({
+				type: 2,
+				title: '请输入链接',
+				content: crm.app_local + '/WxMiniProgram/model.html',
+				area: [($(window).width() * 0.8) + 'px', ($(window).height() - 80) + 'px'],
+				shade: 0.5,
+				shadeClose: true,
+				btn: ['提交', '清空'],
+				yes: function (index, layero) {
+					var iframeWin = window["layui-layer-iframe" + index];
+					var res = iframeWin.callbackdata();
+					console.log(res)
+					if(!res.p_val || !res.p_appid || !res.p_path){
+						if(!$(obj).val()){
+							layer.msg('请先选择完整~', {icon: 2});
+							return false;
+						}
+					} else {
+
+						if(type == 'hot'){
+							hot_arr[obj_i].value = res.p_val;
+							hot_arr[obj_i].appid = res.p_appid;
+							hot_arr[obj_i].path = res.p_path;
+						} else if(type == 'headcard'){
+							page[assembly_id].value = res.p_val;
+							page[assembly_id].appid = res.p_appid;
+							page[assembly_id].path = res.p_path;
+						} else {
+							page[assembly_id].list[obj_i].value = res.p_val;
+							page[assembly_id].list[obj_i].appid = res.p_appid;
+							page[assembly_id].list[obj_i].path = res.p_path;
+						}
+
+						$(obj).val(res.p_val);
+						$(obj).attr("data-appid", res.p_appid);
+						$(obj).attr("data-path", res.p_path);
+					}
+
+					layer.closeAll('iframe'); 
+				},
+				btn2: function(){
+					layer.confirm('确定清空该链接吗？', { title: '温馨提示', }, function(index_con){
+						if(type == 'hot'){
+							hot_arr[obj_i].value = '';
+							hot_arr[obj_i].appid = '';
+							hot_arr[obj_i].path = '';
+						} else if(type == 'headcard'){
+							page[assembly_id].value = '';
+							page[assembly_id].appid = '';
+							page[assembly_id].path = '';
+						} else {
+							page[assembly_id].list[obj_i].value = '';
+							page[assembly_id].list[obj_i].appid = '';
+							page[assembly_id].list[obj_i].path = '';
+						}
+
+						$(obj).val('');
+						$(obj).attr("data-appid", '');
+						$(obj).attr("data-path", '');
+
+						layer.closeAll(); 
+					});
+				},
+				end: function(){
+					
+				}
+			});
+		}
+		// 预览发布
+		function save(type){
+			getArr();
+			if(list.length < 1){
+				layui.use('element', function(){
+					layer.msg("请先选择模块~")
+				});
+			} else {	
+				if(type == 'preview'){
+
+				} else if(type == 'push'){
+					var stringify = JSON.stringify(list);
+					layer.confirm('确定发布吗？', { title: '温馨提示', }, function(index){
+						crm.post(crm.api_local + '/WxMiniProgram/editPagesContent', {list: stringify, wxmp_pages_id: _params.wxmp_pages_id}, function(data) {
+							layer.msg("发布成功~", { icon: 1 });
+							location.reload();
+						});
+					})
+				}
+			}
+		}
+		function getArr(){
+			list = [];
+			for (var i = 0; i < $(".design-preview-sortable").children('.drag-re').length; i++) {
+				var _id = $(".design-preview-sortable").children('.drag-re').eq(i).attr('id').split('pro_div_')[1];
+
+				page.map(function(val, index) {
+					if(_id == val.assembly_id){
+						list[i] = val;
+						list[i].seq = i;
+						list[i].isactive = 'Y';
+						if(val.list && val.list.length > 0){
+							val.list.sort(crm.compare('seq'))
+						}
+						if(val.tag == '头部卡片'){
+							if(!val.list[0].dict_id){
+								val.bg = val.bgList[0].img;
+							}
+						}
+					}
+				})
+			}
+			console.log(list)
+		}
+		function goback(){
+			window.location.href = crm.app_local + "/Portal/index.html?table_name=" + table_name;
+		}
+		// 清空
+		function clearPage(){
+			layer.confirm('确定清空页面吗？', { title: '温馨提示', }, function(index){
+				list = [];
+				hot_i = 0;
+				hot_arr = []; //热区
+				assembly_id = 0;
+				drag_dict_i = 0;
+				page = [];
+				layer.close(index);
+				pages();
+			})
+		}
+	</script>
+</body>
+</html>

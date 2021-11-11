@@ -1,0 +1,92 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+	<title>yydsPortal</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<!-- 顶部开始 -->
+	<div class="container">
+		<div class="logo"></div>
+		<div class="left_open">
+			<i title="展开左侧栏" class="iconfont">&#xe699;</i>
+		</div>
+		<ul class="layui-nav left">
+			<li class="layui-nav-item company_info" id="company_info"></li>
+		</ul>
+		<ul class="layui-nav right">
+			<li class="layui-nav-item user" id="user"></li>
+		</ul>
+		
+	</div>
+	<!-- 顶部结束 -->
+
+	<!-- 中部开始 -->
+	<script type="text/javascript">
+		_inits();
+
+		function _inits(){
+			var _go_init = false;
+			var _index_page = 'home.html';
+			_go_init = _portalJsInit();
+
+			//左侧菜单开始
+			var html = `
+	<div class="left-nav">
+		<div id="side-nav">
+			<ul id="nav"></ul>
+		</div>
+	</div>`;
+
+			$('body').append(html);
+
+			if( _go_init ){
+				_index_page = 'init.html';
+			}else{
+				var new_element = document.createElement("script");
+				new_element.setAttribute("type","text/javascript");
+				new_element.setAttribute("src","../_public/js/comm.js");
+				document.body.appendChild(new_element);
+			}
+			//左侧菜单结束
+
+			//右侧主体开始
+			var html = `
+	<div class="page-content">
+		<div class="layui-tab tab" lay-filter="xbs_tab" lay-allowclose="false">
+			<ul class="layui-tab-title">
+				<li class="home"><i class="layui-icon">&#xe68e;</i>我的桌面</li>
+			</ul>
+			<div class="layui-unselect layui-form-select layui-form-selected" id="tab_right">
+				<dl>
+					<dd data-type="this">关闭当前</dd>
+					<dd data-type="other">关闭其它</dd>
+					<dd data-type="all">关闭全部</dd>
+				</dl>
+			</div>
+			<div class="layui-tab-content">
+				<div class="layui-tab-item layui-show">
+					<iframe src='../Index/` + _index_page + `' frameborder="0" scrolling="yes" class="x-iframe"></iframe>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="page-content-bg"></div>`;
+			$('body').append(html);
+			//右侧主体结束
+		}
+
+		function _portalJsInit(){
+			// if(crm.api_local == '' || crm.api_local == 'http://localhost/yydsPortal/adminApi'){
+			// 	return confirm('欢迎使用yydsPortal，是否进入设置向导？');
+			// }else{
+				return false;
+			// }
+		}
+
+	</script>
+	<!-- 中部结束 -->
+	
+	<!-- 左侧菜单· -->
+</body>
+</html>

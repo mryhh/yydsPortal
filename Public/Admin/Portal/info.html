@@ -1,0 +1,375 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title>编辑</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<form method="post" class="layui-form" id="user_info"></form>
+	</div>
+</body>
+
+<script src="../_public/refresh.js"></script>
+<script type="text/javascript">
+	var this_param = crm.getParam({id: '', table_name: ''});
+	var info_data = new Object();
+	userInfo();
+
+	function userInfo(){
+		crm.post(crm.api_local + "/Portal/info", {id: this_param.id, table_name: this_param.table_name}, function(data){
+			info_data = data;
+			layui.use(['form', 'element','laydate'], function(){
+				var form = layui.form,
+					element = layui.element,
+					laydate = layui.laydate;
+
+				var datas = data.info;
+				var	html_info = '';
+
+				$.each(data.dict_columns, function(key, val){
+					var value = '';
+					var	disabled = '';
+					var	_val = '';
+					var	html_input = '';
+					// if(this_param.id){
+						_val = datas[key];
+						// if((datas.username && key == 'username') || key == 'id' || !val.type){
+						// 	disabled = "disabled";
+						// } 
+					// }
+
+					//展开外键按钮
+					var _source_button = '';
+					if( val.source_info != '' && typeof val.source_info == 'object' ){
+						_source_button += `
+						<div class="layui-btn layui-btn-sm layui-btn-new sp-img" onclick="crm.open_portal('` + val.source_info.source_table_name + `', '` + val.source_info.source_columns_name + `', '` + val.columns_name + `', '` + _val + `');">
+							<i class="layui-icon layui-icon-set-fill"></i>
+						</div>`;
+					}
+					// <button class="layui-btn layui-btn-sm layui-btn-new sp-img" onclick="crm.open_portal('` + val.source_info.source_table_name + `', '` + val.source_info.source_columns_name + `', '` + val.columns_name + `', '` + _val + `');">
+					// 		<i class="layui-icon layui-icon-set-fill"></i>
+					// 	</button>
+
+					if(!val.type){
+						// html_input += `
+						// 	<input type="text" name="` + key + `" value="` + _val + `" class="layui-input" ` + disabled + `>`;
+						html_input += `
+							<input type="text" name="` + key + `" value="` + _val + `" class="layui-input" disabled>`;
+					} else {
+						if(val.type == 'radio'){
+							html_input += `
+							<input type="radio" name="` + key + `" value="Y" title="是" ` + (_val == 'Y' ? 'checked="checked"' : '') + ` ` + disabled + `>
+							<input type="radio" name="` + key + `" value="N" title="否" ` + (_val == 'N' ? 'checked="checked"' : '') + ` ` + disabled + `>`;
+						}else if(val.type == 'input'){
+							if(val.data_type == 'DATE'){
+								html_input += `
+							<input type="text" name="` + key + `" value="` + _val + `" id="` + key + `" placeholder="" autocomplete="off" class="layui-input">
+								`;
+							} else {
+								html_input += `
+							<input type="text" name="` + key + `" value="` + _val + `" id="` + key + `" class="layui-input" ` + disabled + `>`;
+							}
+						}else if( val.type == 'text'){
+							html_input += `
+							<input type="text" name="` + key + `" value="` + _val + `" class="layui-input" disabled>`;
+						}else if(val.type == 'select'){
+							html_input += `
+							<select class="layui-input" name="` + key + `" ` + disabled + ` lay-search>`;
+							$.each(val.type_value_arr, function(keyt, valuet){
+								var _selected = '';
+								if(valuet.select_option_value == _val){
+									_selected = ' selected="selected"';
+								}
+								html_input += `
+								<option value="` + valuet.select_option_value + `"` + _selected + `>` + valuet.select_option_title + `</option>`;
+							});
+							html_input += `
+							</select>`;
+						}else if(val.type == 'checkbox'){
+							var checked_list = _val.split(";");
+							$.each(val.type_value_arr, function(keyt, valuet){
+								var _selected = '';
+
+								if( $.inArray(valuet.select_option_value, checked_list) >= 0 ){
+									_selected = ' checked="checked"';
+								}
+								html_input += `
+								<input type="checkbox" name="` + key + `" lay-skin="primary" value="` + valuet.select_option_value + `" title="` + valuet.select_option_title + `"` + _selected + `>`;
+							});
+						}else if(val.type == 'button'){
+							var _type_value = JSON.parse(val.type_value);
+							var _button_do = '';
+							var _params = '';
+							
+							$.each(_type_value, function(keyt, valuet){
+								if( keyt != 'button_name' && keyt != 'button_href' && keyt != 'button_click' && keyt.indexOf('group_') != '-1' ){
+									// console.log(datas);
+									// console.log(valuet);
+									if(_params == ''){
+										_params += `?` + valuet.button_param_key + `=` + (valuet.button_param_table == this_param.table_name ? datas[valuet.button_param_column] : valuet.button_param_value);
+									}else{
+										_params += `&` + valuet.button_param_key + `=` + (valuet.button_param_table == this_param.table_name ? datas[valuet.button_param_column] : valuet.button_param_value);
+									}
+								}
+							});
+
+							if(_type_value['button_href']){
+								_button_do += ` onclick="window.location.href='` + crm.app_local + _type_value['button_href'] + _params + `'"`;
+							}else if(_type_value['button_click']){
+
+							}
+							html_input += `
+							<button type="button" name="` + key + `" class="layui-btn layui-btn-sm" ` + _button_do + `>` + _type_value['button_name'] + `</button>`;
+						}else if(val.type == 'singleUpload'){
+							// 单独上传
+							html_input += `
+							<div class="multi-upload">`;
+							if(_val.option){
+								html_input += `
+								<img src="` +  _val.option + `" alt="" width="auto" height="100px" name="` + key + `">
+								`;
+							}else{
+								html_input += `
+								<img src="` +  crm.default_img + `" alt="" width="auto" height="100px" name="` + key + `">
+								`;
+							}
+							// html_input += `
+							// <a href="javascript:;" class="single-upload-` + key + `">
+							// 	<img src="` +  crm.default_img + `" alt="" width="auto" height="100px" name="` + key + `">
+							// 	<input type="text" name="` + key + `" value="` + _val.value + `" hidden>
+							// </a>`;
+							html_input += `
+								<div class="multi-item multi-item-btn single-upload-` + key + `">
+									<div class="multi-item-btn">
+										<p>上传图片</p>
+									</div>
+									<input type="text" name="` + key + `" value="` + _val.value + `" hidden>
+								</div>
+							</div>`;
+							singleUpload(key);
+						}else if(val.type == 'multiUpload'){
+							// 多图上传
+							if(this_param.id){
+								html_input += `
+							<div class="multi-upload">`;
+								if(_val){
+
+								}
+								html_input += `
+								<div class="multi-item multi-item-btn">
+									<input type="file" accept="image/*" multiple onchange="multiUploadHandle(this, '` + key + `')">
+									<div class="multi-item-btn">
+										<p>+ 添加图片</p>
+									</div>
+								</div>`;
+								html_input += `
+							</div>`;
+							} else {
+								html_input += `
+								<input type="text" value="请先提交，生成id后再上传图片" class="layui-input" disabled>`;
+							}
+						}
+					}
+					var _notes = '';
+					if(val.notes && val.notes != '' && val.notes != val.title){
+						_notes = `
+							<div class="layui-input-block style-layui-tips">
+								<p>` + val.notes + `</p>
+							</div>`;
+					}
+					html_info += `
+						<div class="layui-form-item set-source-btn">
+							<label class="layui-form-label">
+								<div class="ell2">` + val.title + `</div>
+								` + _source_button + `
+							</label>
+							<div class="layui-input-block">` + html_input + `</div>
+							` + _notes + `
+						</div>`;
+				});
+				html_info += `
+						<div class="layui-form-item">
+							<div class="layui-input-block">
+								<button class="layui-btn" lay-submit lay-filter="demo">立即提交</button>
+							</div>
+						</div>`;
+				$("#user_info").empty().append(html_info);
+
+				//处理子表
+				$.each(data.source_list_reverse, function(keyt, valuet){
+					var tab_html_li = '';
+					var tab_html_div = '';
+
+					$.each(valuet, function(key, value){
+						var _source_url = crm.app_local + '/Portal/index.html?table_name=' + value.table_name;
+						if( value.cols_value == 'new' && value.source_columns_name == 'id'){
+							value.cols_value = '0';
+						}
+						// if( value.columns_name.search(/ in /g) < 0 ){
+						// else{
+							// console.log(value.columns_name);
+							var _source_where = value.columns_name.replace(/ and/g, '').replace(/"/g, '').split(' ');
+
+							_source_url += '&' + _source_where[0] + '=' + value.cols_value;
+							// console.log(_source_where);
+							if( _source_where.length > 1 ){
+								$.each(_source_where, function(_source_where_key, _source_where_value){
+									if(_source_where_key > 0 && _source_where_value != 'and' && _source_where_value != 'AND'){
+										var _source_where_value_1 = _source_where_value.split('.');
+										if( _source_where_value_1.length > 1 ){
+											_source_where_value = _source_where_value_1[1];
+										}
+										// console.log(_source_where_value);
+										var _source_where_value_2 = _source_where_value.split('=');
+										if( _source_where_value_2.length > 1 ){
+											_source_url += '&' + _source_where_value.split('=')[0] + '=' + _source_where_value.split('=')[1];
+										}
+									}
+								});
+							}
+						// }
+						// console.log(_source_url);
+						// }
+						// var _source_ifram = `<iframe src="` + _source_url + `" width="100%" height="` + ($(window).height() - 100) + `px"></iframe>`;
+
+						if(key < 1){
+							var _source_ifram = `<iframe src="` + _source_url + `" width="100%" height="` + ($(window).height() - 100) + `px"></iframe>`;
+
+							tab_html_li += `
+							<li class="layui-this">` + value.title + `</li>`;
+
+							tab_html_div += `
+							<div class="layui-tab-item layui-show">` + _source_ifram + `
+							</div>`;
+						}else{
+							tab_html_li += `
+							<li data-url="`+ _source_url + `">` + value.title + `</li>`;
+
+							tab_html_div += `
+							<div class="layui-tab-item"></div>`;
+						}
+					});
+
+					var tab_html = `
+					<div class="layui-tab layui-tab-brief layui-user layui-user-new" lay-filter="tab_user">
+						<ul class="layui-tab-title">` + tab_html_li + `
+						</ul>
+						<div class="layui-tab-content">` + tab_html_div + `
+						</div>
+					</div>`;
+					$("#user_info").append(tab_html);
+
+				});
+				////处理子表结束
+				
+				// $(".layui-tab-title li").removeClass('layui-this');
+				// $(".layui-tab-item").removeClass('layui-show');
+				// $(".layui-tab-title").children('li').eq(current).addClass('layui-this');
+				// $("#vip_page").children('.layui-tab-item').eq(current).addClass('layui-show');
+
+				form.render();
+				element.on('tab(tab_user)', function(){
+					var tab_i_url = $(this).data('url');
+					// console.log(tab_i_url)
+					if($(".layui-user").find(".layui-tab-item").eq($(this).index()).html() == ''){
+						$(".layui-user").find(".layui-tab-item").eq($(this).index()).html(`<iframe src="` + tab_i_url + `" width="100%" height="` + ($(window).height() - 100) + `px"></iframe>`);
+					}
+				})
+				//日期
+				$.each(data.dict_columns, function(key, val){
+					if(val.type == 'input' && val.data_type == 'DATE'){
+					// console.log(key)
+						laydate.render({
+							elem: "#" + key,
+							type: 'datetime',
+							position: 'abolute'
+						});
+					}
+				})
+
+				//监听提交
+				form.on('submit(demo)', function(data){
+					
+					$("input[type=checkbox]:checked").parents(".layui-form-item").each(function() {
+						var checked_name = $(this).find("input[type=checkbox]:checked").attr('name');
+						var obj = $(this).find("input:checkbox[name=" + checked_name + "]:checked");
+						if(checked_name){
+							data.field[checked_name] = '';
+						}
+						obj.each(function () {
+							data.field[checked_name] += $(this).val() + ';';
+						});
+					})
+					layer.confirm('确认提交?', function(i){
+						crm.post(crm.api_local + "/portal/editInfo", {table_name: this_param.table_name, cols: data.field}, function(data){
+							console.log(data);
+							setTimeout(function(){
+								// window.location.reload();
+								window.location.href = crm.app_local + '/Portal/info.html?table_name=' + this_param.table_name + '&id=' + data.id;
+							}, 1000)
+						});
+						layer.close(i);
+					})
+					
+					return false;
+				});
+			})
+		});
+	}
+
+	// 单图上传
+	function singleUpload(key){
+		var className = '.single-upload-' + key;
+		var id = (this_param.id == '' ? 'new' : this_param.id);
+
+		crm._upload( className, { data: { 'path': this_param.table_name, 'id': id }, }, function(that, res){
+			var src = href_local + res.data.infos.file.src;
+			$(className).parent().children('img').attr('src', src);
+			$(className).children('input').val(res.data.infos.file.src);
+		});
+	}
+	//多图
+	function multiUploadHandle(obj, key){
+		// console.log(key);
+		// console.log(info_data);
+		var _type_value_arr = info_data.dict_columns[key].type_value_arr;
+
+		var id = (this_param.id == '' ? 'new' : this_param.id);
+
+		var files = obj.files;
+		var formData = new FormData();
+		for(let i in files){
+			formData.append("file[]", files[i]);
+		}
+		formData.append("path", _type_value_arr.table_name);
+		formData.append("id", id);
+
+		crm._uploadMulti( { formData, }, function(res){
+			//批量插入图片路径数据
+			var list = new Array();
+			$.each(res.infos, function(i, val){
+				list[i] = new Object();
+				list[i][_type_value_arr.columns_name] = val.src;
+			});
+			console.log(list);
+			
+			crm.post(
+				crm.api_local + '/Portal/insertAll', 
+				{
+					table_name: _type_value_arr.table_name, 
+					source_table_name: this_param.table_name, 
+					source_table_data_id: this_param.id, 
+					list: list
+				}, 
+				function(data){
+					// console.log(data);
+					if(data.res.error == ''){
+						window.location.reload();
+					}
+				}
+			);
+		})
+	}
+</script>
+</html>

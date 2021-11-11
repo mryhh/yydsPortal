@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>编辑一级菜单</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<button class="layui-btn layui-btn-new add-btn">新增</button>
+
+		<div class="table-demo">
+			<table class="layui-table" id="parent_menu" lay-filter="parent_menu"></table>
+
+			<script type="text/html" id="barDemo">
+				<a class="layui-btn layui-btn-sm" lay-event="submit">提交</a>
+			</script>
+		</div>
+	</div>
+</body>
+
+<script src="../_public/refresh.js"></script>
+<script type="text/javascript">
+	var list = [];
+	var add_i = 0;
+
+	menuOne();
+	function menuOne(){
+		crm.post(crm.api_local + "/operate/menu", {}, function(data){
+			list = data.parent;
+			var cols = [[
+				{ field: 'seq', title: '排序', sort: true, width: 90, 
+					templet: function(d){
+						return `<input class="layui-input" type="text" name="" name="" value="` + d.seq + `" oninput="editInput(event, this, '` + d.id + `', 'seq');">`;
+					}, 
+				},
+				{ field: 'id', title: 'ID', sort: true, width: 80, },
+				{ field: 'title', title: '菜单标题', sort: true, /*edit: 'text', */
+					templet: function(d){
+						return `<input class="layui-input" type="text" name="" name="" value="` + d.title + `" oninput="editInput(event, this, '` + d.id + `', 'title');">`;
+					}, 
+				},
+				// { field: 'icon', title: '菜单图标', /*edit: 'text', */ 
+				// 	templet: function(d){
+				// 		return `<input class="layui-input" type="text" name="" name="" value="` + d.icon + `" oninput="editInput(event, this, '` + d.id + `', 'icon');">`;
+				// 	}, 
+				// },
+				{ field: 'isactive', title: '可用', width: 90, sort: true,
+					templet: function(d){
+						var checked = (d.isactive == 'Y' ? 'checked' : '');
+						return `<input type="checkbox" name="" value="` + d.id + `" lay-skin="switch" lay-filter="switch" dat-name="isactive" lay-text="是|否" ` + checked + `>`;
+					}, 
+				},
+				{ title: '提交', toolbar: '#barDemo', width: 100, }
+			]]
+			crm._table('#parent_menu', { list, cols }, function(table, form){
+				console.log(list)
+				//监听单元格
+				form.on('edit(parent_menu)', function(obj){
+					console.log(obj)
+				});
+				// 开关
+				form.on('switch(switch)', function(obj){
+					var key = obj.elem.dataset.name;
+					var _switch = obj.elem.checked ? 'Y' : 'N';
+					for(var i = 0; i < list.length; i++){
+						if(list[i].id == obj.value){
+							list[i][key] = _switch;
+						}
+					}
+				});
+				// 新增
+				$(".add-btn").click(function(){
+					add_i ++;
+					var oldData = table.cache["parent_menu"]; //获取现有数据
+					var newData = {
+						seq: '',
+						id: 'tr_' + add_i,
+						title: "这是新增的一级菜单",
+						icon: "",
+						admin_operate_id: 0,
+						admin_operate_id: '',
+						isactive: 'Y',
+					};
+					oldData.unshift(newData);
+					table.reload("parent_menu", {
+						data: oldData,
+					})
+					list = oldData;
+					console.log(list)
+					console.log(table.cache["parent_menu"])
+				});
+				//提交
+				table.on('tool(parent_menu)', function(obj){
+					var data = obj.data;
+					for(var i = 0; i < list.length; i++){
+						if(list[i].id == data.id){
+							data = list[i];
+						}
+					}
+					console.log(data);
+					if(obj.event === 'submit'){	
+						console.log(obj)
+						var _param = {
+							seq: data.seq,
+							id: data.id,
+							title: data.title,
+							icon: data.icon,
+							isactive: data.isactive,
+							parent_id: (data.parent_id ? data.parent_id : 0),
+							admin_operate_id: data.admin_operate_id
+						};
+						if(!_param.id || _param.id.indexOf('tr_') == 0){
+							_param.id = 'new'
+						}
+						console.log(_param);
+						crm.post(crm.api_local + "/operate/editMenu", _param, function(data){
+							console.log(data);
+							location.replace(location.href);
+							obj.tr.find('.font-red').removeClass('font-red');
+						});
+					}
+				});
+			})
+		});
+	}
+	// 编辑
+	function editInput(e, obj, id, type){
+		$(obj).addClass('font-red');
+		for(var i = 0; i < list.length; i++){
+			if(list[i].id == id){
+				list[i][type] = e.target.value;
+			}
+		}
+		console.log(list)
+	}
+</script>
+</html>

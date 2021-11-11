@@ -1,0 +1,65 @@
+.sysRole > ul {
+    margin-bottom: 20px;
+}
+
+.sysRole .layui-container {
+    margin: 0;
+    padding: 0;
+}
+
+.sysRole .layui-container .lfImg {
+    padding-right: 20px;
+}
+
+.sysRole .layui-container .lfImg > img {
+    width: 100%;
+}
+
+.crm-sys-sysrole-add-approle-right {
+    -webkit-box-flex: 1;
+    -ms-flex: 1;
+    flex: 1;
+    background-color: #fff;
+    position: relative;
+}
+
+.ezrd-title:not(:last-child) {
+    margin-bottom: 60px;
+}
+
+.ezrd-title-header {
+    padding-left: 16px;
+    position: relative;
+    line-height: 1;
+    color: #333;
+    font-size: 16px;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-pack: justify;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+    font-weight: bold;
+    align-items: center;
+}
+
+.ezrd-title-header-left-border:before {
+    content: "";
+    position: absolute;
+    width: 4px;
+    height: 18px;
+    border-radius: 2px;
+    background: #8ac24a;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    margin: auto;
+}
+
+.crm-sys-sysrole-add-approle-con {
+    padding-left: 20px;
+}
+
+#test .layui-tree-entry {
+    padding: 6px 0;
+}

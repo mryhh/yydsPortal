@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>操作管理</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<div class="layui-form">
+			<div class="layui-form-item">
+				<div class="layui-inline">
+					<div class="layui-input-inline">
+						<select lay-filter="editStateS" data-type="top" id="page_or_table" class="layui-input">
+							<option value="all">页面和表格</option>
+							<option value="page">仅页面</option>
+							<option value="table">仅表格</option>
+						</select>
+					</div>
+				</div>
+				<div class="layui-inline">
+					<div class="layui-form-label">表名</div>
+					<div class="layui-input-inline">
+						<input type="text" id="in_key" class="layui-input" name="keywords" data-key="table_name" placeholder="请输入表名">
+					</div>
+					<div class="layui-input-inline">
+						<div class="layui-btn layui-btn-new" onclick="_init();">搜索</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div class="table-demo">
+			<table class="layui-table" id="operate" lay-filter="operate"></table>
+
+			<script type="text/html" id="barDemo">
+				<a class="layui-btn layui-btn-sm" lay-event="submit">提交</a>
+			</script>
+		</div>
+	</div>
+</body>
+
+<script src="../_public/refresh.js"></script>
+<script type="text/javascript">
+	var arr = [];
+	var portal_ctl = 'all';
+
+	_init();
+
+	//设定加载内容
+	function _init(){
+		portal_ctl = $("#page_or_table").val();
+		arr = [];
+		userList();
+	}
+
+	function userList(){
+		keywords = crm._keywords();
+console.log(portal_ctl);
+		crm.post(crm.api_local + "/operate/index", {portal_ctl: portal_ctl, keywords: keywords}, function(data){
+			console.log(data);
+			var list = data.list;
+			
+			$.each(list, function(i, val) {
+				if(val.function){
+					$.each(val.function, function(key, value) {
+						var obj = {
+							id: ( value && value.id ? value.id : ''),
+							title: ( value && value.title ? value.title : ''),
+							parents: [],
+							class: ( val && val.class ? (val.class + '/' + key) : '' ),
+							isactive: ( value && value.isactive ? value.isactive : '' ),
+							html_url: ( value && value.html_url  ? value.html_url : '' ),
+							html: val.html ? val.html : [],
+							operate: ( value && value.operate ? value.operate : ''),
+						};
+						if(val.html){
+							var select = {};
+
+							$.each(val.html, function(keyt, valuet){
+								obj.parents.push(valuet)
+							});
+						}
+						arr.push(obj)
+					});
+				}
+			});
+			console.log(arr);
+
+			var cols = [[
+				{ field: 'id', title: 'ID', /*sort: true,*/ width: 80, },
+				{ field: 'class', title: '操作地址', /*sort: true,*/ },
+				{ field: 'title', title: '操作标识', /*edit: 'text',*/ 
+					templet: function(d){
+						return `<input class="layui-input" type="text" name="" value="` + d.title + `" oninput="editInput(event, this, '` + d.class + `', 'title');">`;
+					},
+				},
+				{ field: 'html_url', title: '页面地址', /*sort: true,*/
+					templet: function(d){
+						var html = '';
+						html += `
+							<select class="layui-input layui-input-28" lay-filter="editStateS" data-class="` + d.class + `">
+								<option value="">--无--</option>`;
+						$.each(d.html, function(t, val){
+							var _selected = '';
+							if(d.html_url == val){
+								_selected = ' selected="selected"';
+							}
+							html += `
+							<option` + _selected + ` value="` + val + `">` + val + `</option>`;
+						});
+						html += `
+							</select>`;
+						return html;
+					}, 
+				},
+				{ field: 'isactive', title: '可用', width: 90, /*sort: true,*/ 
+					templet: function(d){
+						var checked = (d.isactive == 'Y' ? 'checked' : '');
+						return `<input type="checkbox" name="isactive" value="` + d.class + `" lay-skin="switch" lay-filter="isactive" lay-text="是|否" ` + checked + `>`;
+					}, 
+				},
+				{ title: '操作', toolbar: '#barDemo', width: 100, }
+			]];
+			crm._table('#operate', {list: arr, cols}, function(table, form){
+				//监听单元格
+				form.on('edit(operate)', function(obj){
+					console.log(obj)
+				});
+				//监听下拉框
+				form.on('select(editStateS)', function (obj) {
+					console.log(obj)
+					var type = $(obj.elem).attr("data-type");
+					if(type && type == 'top'){
+						$('input#in_key').val('');
+						_init();
+						return false;
+					}
+					var class_id = $(obj.elem).attr("data-class"); 
+					for (i = 0; i < arr.length; i++) {
+						if (arr[i].class == class_id) {
+							arr[i].html_url = obj.value;
+						}
+					}
+					obj.othis.parents('tr').find('.layui-unselect').addClass('font-red');
+					console.log(arr);
+				})
+				// 可用|禁用
+				form.on('switch(isactive)', function(obj){
+					var isactive = obj.elem.checked ? 'Y' : 'N';
+					for(var i = 0; i < arr.length; i++){
+						if(arr[i].class == obj.value){
+							arr[i].isactive = isactive;
+						}
+					}
+					console.log(arr);
+				});
+				//提交
+				table.on('tool(operate)', function(obj){
+					console.log(obj)
+					if(obj.event === 'submit'){	
+						console.log(obj)
+						var data = obj.data;
+						var _param = {
+							id: data.id ? data.id : 'new',
+							operate: data.class,
+							title: data.title,
+							html_url: data.html_url,
+							isactive: data.isactive,
+						};
+						console.log(_param)
+						// if(_param['operate'] != data.class){
+						// 	alert('操作异常');
+						// 	return false;
+						// }
+						crm.post(crm.api_local + "/operate/edit", _param, function(data){
+							console.log(data);
+							obj.tr.find('.font-red').removeClass('font-red');
+							_init();
+						});
+					}
+				});
+			});
+		})
+	}
+	// 编辑
+	function editInput(e, obj, id, type){
+		$(obj).addClass('font-red');
+		for(var i = 0; i < arr.length; i++){
+			if(arr[i].class == id){
+				if(type == 'title'){
+					arr[i].title = e.target.value;
+				} 
+			}
+		}
+	}
+</script>
+</html>

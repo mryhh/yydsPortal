@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title></title>
+	<link rel="stylesheet" href="../_public/css/IgShop.css">
+	<script src="../_public/head.js"></script>
+</head>
+
+<body>
+	<div class="x-body">
+		<div id="vip"></div>
+	</div>
+</body>
+
+<script type="text/javascript">
+	var current = 0;
+	var r_data = {};
+	var callbackdata = function () {
+		return r_data;
+	}
+	var storeList = [
+		{ name: crm.app_store_common_text, path: crm.app_store_common, check: false,},
+		{ name: crm.app_store_cate_text, path: crm.app_store_cate, check: false,},
+		{ name: crm.app_store_product_text, path: crm.app_store_product, check: false,},
+	];
+	var page_text, page_path, page_appid;
+
+	$(function(){
+		vip_page();
+	})
+	function vip_page(){
+		var obj = parent._admin;
+		var in_val = $(obj).val();
+		var in_appid = $(obj).attr('data-appid');
+		var html = '';
+		var search_list = {
+			isactive: 'Y',
+		};
+		crm.post(crm.api_local + '/Portal/index', {table_name: 'WXMP_PAGES', data_list: 'Y', search_list}, function(data) {
+			pages_data = data.list;
+			layui.use(['element', 'form'], function(){
+				var $ = layui.jquery,
+					element = layui.element,
+					form = layui.form;
+				html += `
+				<div class="layui-tab layui-tab-brief" lay-filter="">
+					<ul class="layui-tab-title">
+						<li class="layui-this">会员中心</li>
+						<li>会员中心积分商品</li>
+						<li>会员中心优惠券</li>
+						<li>官方商城小程序</li>
+						<li>自定义小程序</li>
+						<li>领取优惠券</li>
+					</ul>
+					<div class="layui-tab-content" id="vip_page">
+						<div class="layui-tab-item">
+							<div class="table-demo">
+								<div class="layui-table">
+									<div class="flex-center vip_page_tr">
+										<div class="flex-1">页面名称</div>
+										<div class="flex-1">小程序页面</div>
+									</div>
+									<div class="vip-table-box layui-form">`;
+									$.each(pages_data, function(i, val){
+										html += `
+										<div class="flex-center vip_page_tr vip_page_tr_` + i + `">
+											<div class="flex-1">` + val.title + `</div>
+											<div class="flex-1">
+												<input type="radio" name="page_sel" value="` + val.title + `" title="" lay-filter="page" data-name="title" data-appid="` + val.app_id + `" data-path="` + val.pages + `" data-id="` + val.id + `" data-title="` + val.title + `">
+											</div>
+										</div>`;
+									})
+									html += `
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="layui-tab-item">
+							<div class="layui-form vip-other-form">
+								<div class="layui-form-item">
+									<label class="layui-form-label">` + crm.app_product_ig_text + `</label>
+									<div class="layui-input-block">
+										<input type="text" name="Igproductid" lay-verify="Igproductid" autocomplete="off" placeholder="请输入积分商品ID" class="layui-input">
+									</div>
+								</div>
+								<div class="layui-form-item">
+									<div class="layui-input-block">
+										<button type="submit" class="layui-btn layui-btn-new" lay-submit="" lay-filter="submit_product">确定</button>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="layui-tab-item">
+							<div class="layui-form vip-other-form">
+								<div class="layui-form-item">
+									<label class="layui-form-label">` + crm.app_coupon_text + `</label>
+									<div class="layui-input-block">
+										<input type="text" name="couponid" lay-verify="couponid" autocomplete="off" placeholder="请输入优惠券ID" class="layui-input">
+									</div>
+								</div>
+								<div class="layui-form-item">
+									<div class="layui-input-block">
+										<button type="submit" class="layui-btn layui-btn-new" lay-submit="" lay-filter="submit_product">确定</button>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="layui-tab-item">
+							<div class="layui-form vip-other-form">
+								<div class="layui-form-item">
+									<label class="layui-form-label">请先选择</label>
+									<div class="layui-input-block">
+										<select name="selectapp" lay-filter="select-app" class="layui-input select-app">
+											<option value="">请先选择</option>`;
+										$.each(storeList, function(i, val){
+											html += `
+											<option ` + (val.check ? 'selected' : '') + ` value="` + i + `">` + val.name + `</option>`;
+										})
+										html += `
+										</select>
+									</div>
+								</div>
+								<div class="layui-form-item">
+									<label class="layui-form-label">请输入ID</label>
+									<div class="layui-input-block">
+										<input type="text" name="store_in" lay-verify="store_in" autocomplete="off" placeholder="请输入相关ID" class="layui-input">
+									</div>
+								</div>
+								<div class="layui-form-item">
+									<div class="layui-input-block">
+										<button type="submit" class="layui-btn layui-btn-new" lay-submit="" lay-filter="submit_product">确定</button>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="layui-tab-item">
+							<div class="layui-form vip-other-form">
+								<div class="layui-form-item">
+									<label class="layui-form-label">小程序链接</label>
+									<div class="layui-input-block">
+										<input type="text" name="appid" lay-verify="appid" autocomplete="off" placeholder="请输入小程序appid" class="layui-input" id="other_appid" value="">
+									</div>
+								</div>
+								<div class="layui-form-item">
+									<div class="layui-input-block">
+										<input type="text" name="path" lay-verify="path" autocomplete="off" placeholder="请输入小程序路径" class="layui-input" id="other_path">
+									</div>
+								</div>
+								<div class="layui-form-item">
+									<div class="layui-input-block">
+										<button type="submit" class="layui-btn layui-btn-new" lay-submit="" lay-filter="submit2">确定</button>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="layui-tab-item">
+							<div class="layui-form vip-other-form">
+								<div class="layui-form-item">
+									<label class="layui-form-label">` + crm.app_coupon_btn + `</label>
+									<div class="layui-input-block">
+										<input type="text" name="couponidbtn" lay-verify="couponidbtn" autocomplete="off" placeholder="请输入优惠券ID" class="layui-input">
+									</div>
+								</div>
+								<div class="layui-form-item">
+									<div class="layui-input-block">
+										<button type="submit" class="layui-btn layui-btn-new" lay-submit="" lay-filter="submit_product">确定</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>`;
+				$("#vip").empty().append(html);
+				if(in_val){
+					pages_data.map(function(p_v, p_i) {
+						if(in_val == p_v.title){
+							current = 0;
+							$('.vip_page_tr_' + p_i).find('input').click();
+						} else {
+							if(in_val.indexOf(crm.other_app) != -1){
+								current = 4;
+								var path = in_val.split(crm.other_app)[1];
+								$("#other_appid").val(in_appid);
+								$("#other_path").val(path);
+							} else if(in_val.indexOf(crm.app_product_ig_text) != -1){
+								current = 1;
+								var product_ig_id = in_val.split(crm.app_product_ig_text)[1];
+								$("input[name='Igproductid']").val(product_ig_id);
+							} else if(in_val.indexOf(crm.app_coupon_text) != -1){
+								current = 2;
+								var coupon_id = in_val.split(crm.app_coupon_text)[1];
+								$("input[name='couponid']").val(coupon_id);
+							}  else if(in_val.indexOf(crm.app_coupon_btn) != -1){
+								current = 5;
+								var couponidbtn = in_val.split(crm.app_coupon_btn)[1];
+								$("input[name='couponidbtn']").val(couponidbtn);
+							} else{
+								storeList.map(function(s_v, s_i) {
+									if(in_val.indexOf(s_v.name) != -1){
+										current = 3;
+										s_v.check = true;
+										var store_in = in_val.split(s_v.name)[1];
+										$("input[name='store_in']").val(store_in);
+										var select = 'dd[lay-value=' + s_i + ']';
+										$('.select-app').siblings("div.layui-form-select").find('dl').find(select).click();
+									}
+								})
+								form.render('select');
+							}
+						}
+					})
+				}
+				$(".layui-tab-title li").removeClass('layui-this');
+				$(".layui-tab-item").removeClass('layui-show');
+				$(".layui-tab-title").children('li').eq(current).addClass('layui-this');
+				$("#vip_page").children('.layui-tab-item').eq(current).addClass('layui-show');
+
+				form.render();
+				var collectionId = parent.$("#hideCollectionId").val();
+
+				form.on('radio(page)', function (data) {
+					page_path = data.elem.dataset.path;
+					if(page_path == crm.app_com_path){
+						page_path = page_path + '?pid=' + data.elem.dataset.id + '&title=' + data.elem.dataset.title;
+					}
+					close(data.value, page_path, data.elem.dataset.appid, 'radio');
+				});
+
+				form.on('select(select-app)', function(data) {
+					var value = data.value;
+					if(value != ''){
+						storeList[value].check = true;
+					}
+				});
+				form.on('submit(submit_product)', function(data){
+					var field = data.field;
+					var page_appid = crm.default_appid;
+
+					if(field.Igproductid == ''){
+						layer.msg('请先填写会员中心小程序' + crm.app_product_ig_text, {icon: 2,});
+						return false;
+					}
+					if(field.couponid == ''){
+						layer.msg('请先填写会员中心小程序' + crm.app_coupon_text, {icon: 2,});
+						return false;
+					}
+					if(field.couponidbtn == ''){
+						layer.msg('请先填写会员中心小程序' + crm.app_coupon_btn, {icon: 2,});
+						return false;
+					}
+					if(field.store_in == ''){
+						layer.msg('请先填写相对应ID', {icon: 2,});
+						return false;
+					}
+					if(field.selectapp == ''){
+						layer.msg('请先选择', {icon: 2,});
+						return false;
+					}
+
+					if(field.Igproductid){
+						page_text = crm.app_product_ig_text + field.Igproductid;
+						page_path = crm.app_product_ig + '?id=' + field.Igproductid;
+					} else if(field.couponid){
+						page_text = crm.app_coupon_text + field.couponid;
+						page_path = crm.app_coupon + '?id=' + field.couponid;
+					}  else if(field.couponidbtn){
+						page_text = crm.app_coupon_btn + field.couponidbtn;
+						page_path = field.couponidbtn;
+					} else if(field.store_in && field.selectapp){
+						page_appid = crm.store_appid;
+						storeList.map(function(s_v, s_i){
+							if(s_v.check){
+								page_text = storeList[s_i].name + field.store_in;
+								page_path = storeList[s_i].path + '?id=' + field.store_in;
+							}
+						})
+					}
+					close(page_text, page_path, page_appid, '');
+				});
+				form.on('submit(submit2)', function(data){
+					console.log(data)
+					var field = data.field;
+					if(!field.appid || !field.path){
+						layer.msg('请填写完整~', {icon: 2,});
+						return false;
+					}
+					close(crm.other_app + field.path, field.path, field.appid, '');
+				});
+
+			});
+		});
+	}
+	function close(p_val, p_path, p_appid, type){
+		// parent.$("#p_val").text(data.value);
+		// parent.$("#p_path").text(data.elem.dataset.path);
+		// parent.$("#p_appid").text(data.elem.dataset.appid);
+		// var index = parent.layer.getFrameIndex(window.name); //先得到当前iframe层的索引
+		// parent.layer.close(index); //再执行关闭
+		r_data = { 
+			p_val: p_val,
+			p_path: p_path,
+			p_appid: p_appid,
+		};
+		if(type != 'radio'){
+			layer.msg('添加成功，请提交~', {icon: 1});
+		}
+	}
+</script>
+
+</html>

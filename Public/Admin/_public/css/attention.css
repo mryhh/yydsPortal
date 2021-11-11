@@ -1,0 +1,126 @@
+* {
+    box-sizing: border-box;
+}
+
+.profile .layui-input-block p {
+    font-size:13px;
+    padding: 5px 0;
+    color: #666;
+}
+
+.phone_box {
+    background-image: url(../images/app_02.png);
+    width: 361px;
+    min-height: 550px;
+    position: relative;
+}
+
+.appphone_top {
+    width: 316px;
+    margin-left: 23px;
+    background-image: url(../images/ceremony_top.png);
+    background-repeat: no-repeat;
+    height: 61px;
+    color: #fff;
+    position: relative;
+    text-align: center;
+    padding-top: 30px;
+}
+
+.edit_box {
+    padding: 0px 20px;
+    color: #666;
+}
+
+.uploadImg {
+    display: none;
+}
+
+.nodeShowTitle {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 30px;
+    line-height: 30px;
+    border: none;
+}
+
+.nodeShowTitle span {
+    display: block;
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    padding-left: 5px;
+    color: #fff;
+}
+
+.addMaterc {
+    /* width: 255px; */
+    height: 76px;
+    border: 1px dashed #cacaca;
+    text-align: center;
+    /* margin: 5px 0 5px 10px; */
+}
+
+.addMaterc .addShowc {
+    color: #919191;
+    font-size: 60px;
+    line-height: 60px;
+    text-align: center;
+}
+
+.childrenNodeList {
+    
+}
+
+.childrenNode {
+    position: relative;
+    padding: 10px;
+    height: 76px;
+    overflow-y: scroll;
+    border-top: 1px solid #cacaca
+}
+
+.childrenNode > .children {
+    display: flex;
+    justify-content: space-between;
+}
+
+.childrenNode .editLay {
+    display: none;
+}
+
+.grid-nav-bar > .grid-nav-bar-item {
+    display: table-cell;
+    text-align: center;
+    vertical-align: middle;
+}
+
+
+.editLay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    height: 30px;
+    margin: auto;
+    text-align: center;
+}
+
+#keyWordArr li {
+    display: inline-block;
+    padding: 5px 10px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background-color: #DBE4EA;
+    margin-right: 5px;
+}
+
+#keyWordArr li > span {
+    margin-left: 5px;
+    margin-right: 5px;
+    font-size: 14px;
+    color: #09f;
+    cursor: pointer;
+}

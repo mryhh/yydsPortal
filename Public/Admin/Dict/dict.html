@@ -1,0 +1,127 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title>数据字典</title>
+	<script src="../_public/head.js"></script>
+</head>
+
+<body>
+	<div class="x-body">
+		<div class="layui-form">
+			<div class="layui-form-item">
+				<div class="layui-form-label">表名</div>
+				<div class="layui-input-inline">
+					<input type="text" class="layui-input" name="keywords" data-key="table_name" placeholder="请输入表名">
+				</div>
+				<div class="layui-form-label">表注释</div>
+				<div class="layui-input-inline">
+					<input type="text" class="layui-input" name="keywords" data-key="title" placeholder="">
+				</div>
+				<div class="layui-input-inline">
+					<div class="layui-btn layui-btn-new" onclick="showTables();">搜索</div>
+				</div>
+			</div>
+		</div>
+		
+		<div class="table-demo">
+			<table class="layui-table layui-col-space10" id="dict" lay-filter="dict"></table>
+
+			<script type="text/html" id="barDemo">
+				<div class="layui-btn-container">
+					<a class="layui-btn layui-btn-sm" lay-event="submit">提交</a>
+					<a class="layui-btn layui-btn-sm layui-btn-normal" lay-event="edit">编辑</a>
+				</div>
+			</script>
+		</div>
+	</div>
+
+	<script src="../_public/refresh.js"></script>
+	<script type="text/javascript">
+		var list = [];
+		showTables();
+
+
+		function showTables(){
+			keywords = crm._keywords();
+
+			crm.post(crm.api_local + "/dict/tables", {keywords: keywords}, function(data){
+				list = data;
+				var cols = [[
+					{ field: 'id', title: 'ID', /*sort: true,*/ width: 80, },
+					{ field: 'table_name', title: '表名', /*sort: true,*/ },
+					{ field: 'comments', title: '数据库注释', },
+					{ field: 'title', title: '字典注释', /*edit: 'text',*/ 
+						templet: function(d){
+							return `<input class="layui-input" type="text" name="" value="` + d.title + `" oninput="editInput(event, this, '` + d.table_name + `', 'title');">`;
+						}, 
+					},
+					{ field: 'notes', title: '备注', /*edit: 'text',*/ 
+						templet: function(d){
+							return `<input class="layui-input" type="text" name="" value="` + d.notes + `" oninput="editInput(event, this, '` + d.table_name + `', 'notes');">`;
+						}, 
+					},
+					{ field: 'is_menu', title: '是否菜单', width: 120, /*sort: true,*/ 
+						templet: function(d){
+							var checked = (d.is_menu == 'Y' ? 'checked' : '');
+							return `<input type="checkbox" name="" value="` + d.table_name + `" lay-skin="switch" lay-filter="switch" data-name="is_menu" lay-text="是|否" ` + checked + `>`;
+						}, 
+					},
+					{ field: 'isactive', title: '可用', width: 90, /*sort: true,*/ 
+						templet: function(d){
+							var checked = (d.isactive == 'Y' ? 'checked' : '');
+							return `<input type="checkbox" name="" value="` + d.table_name + `" lay-skin="switch" lay-filter="switch" data-name="isactive" lay-text="是|否" ` + checked + `>`;
+						}, 
+					},
+					{ title: '操作', toolbar: '#barDemo', width: 150, },
+				]]
+				crm._table('#dict', { list, cols }, function(table, form){
+					// 监听单元格
+					// table.on('edit(dict)', function(obj){
+					// 	console.log(obj)
+					// });
+					// 开关
+					form.on('switch(switch)', function(obj){
+						var key = obj.elem.dataset.name;
+						var _switch = obj.elem.checked ? 'Y' : 'N';
+						for(var i = 0; i < data.length; i++){
+							if(data[i].table_name == obj.value){
+								data[i][key] = _switch;
+							}
+						}
+					});
+					// table.on('row(dict)', function(obj){
+					// 	xadmin.open('查看'+ obj.data.table_name, crm.app_local + `/Dict/dictcol.html?table_name=` + obj.data.table_name)
+					// });
+					table.on('tool(dict)', function(obj){
+						console.log(obj)
+						if(obj.event === 'submit'){
+							console.log(obj.data)
+							var _parm = obj.data;
+							if(!_parm.id){
+								_parm.id = 'new'
+							}
+							crm.post(crm.api_local + "/dict/editTable", _parm, function(data){
+								console.log(data)
+								obj.tr.find('.font-red').removeClass('font-red');
+								showTables();
+							})
+						} else if( obj.event == 'edit'){
+							xadmin.open('查看[' + obj.data.title + '] : ' + obj.data.table_name, crm.app_local + `/Dict/dictcol.html?table_name=` + obj.data.table_name)
+						}
+					});
+				})
+			});
+		}
+		// 编辑
+		function editInput(e, obj, id, type){
+			$(obj).addClass('font-red');
+			for(var i = 0; i < list.length; i++){
+				if(list[i].table_name == id){
+					list[i][type] = e.target.value;
+				}
+			}
+		}
+	</script>
+</body>
+
+</html>

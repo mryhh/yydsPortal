@@ -1,0 +1,12 @@
+﻿document.writeln("<meta charset=\'UTF-8\'>");
+document.writeln("<meta name=\'renderer\' content=\'webkit|ie-comp|ie-stand\'>");
+document.writeln("<meta http-equiv=\'X-UA-Compatible\' content=\'IE=edge,chrome=1\'>");
+document.writeln("<meta name=\'viewport\' content=\'width=device-width,user-scalable=yes, minimum-scale=0.4, initial-scale=0.8\' />");
+document.writeln("<meta http-equiv=\'Cache-Control\' content=\'no-siteapp\' />");
+document.writeln("<link rel=\'shortcut icon\' href=\'/favicon.ico\' type=\'image/x-icon\' />");
+document.writeln("<link rel=\'stylesheet\' href=\'../_public/css/font.css\'>");
+// document.writeln("<link rel=\'stylesheet\' href=\'../_public/css/font2/iconfont.css\'>");
+document.writeln("<link rel=\'stylesheet\' href=\'../_public/css/xadmin.css?v=" + new Date().getTime() + "\'>");
+document.writeln("<script src=\'../_public/js/jquery.min.js\'></script>");
+document.writeln("<script src=\'../_public/layui/dist/layui.js\'></script>");
+document.writeln("<script src=\'../_public/js/aPortal.js?v=" + new Date().getTime() + "\'></script>");

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<script src="../_public/head.js"></script>
+	<style>
+		.layui-table td, .layui-table th{
+			max-width: 100px;
+		}
+	</style>
+</head>
+<body>
+	<div class="txt-load">加载中~</div>
+	<div class="x-body">
+		<div class="layui-form-item" id="clicks">
+			<!-- <button class="layui-btn layui-btn-sm layui-btn-new" onclick="qrcode_img();">加载二维码</button> -->
+		</div>
+
+		<div class="layui-form" id="search"></div>
+
+		<div class="table-demo" id="qrcodeList"></div>
+	</div>
+</body>
+
+<script src="../_public/refresh.js"></script>
+<script src="../_public/js/jquery.qrcode.min.js"></script>
+<script src="../_public/js/jszip.min.js"></script>
+<script src="../_public/js/FileSaver.js"></script>
+<script type="text/javascript">
+	var _page_param = crm.getParam('');
+
+	window.onload = async function(){
+		await _init();
+	}
+
+	async function _init(){
+		await $.post(crm.api_local + "/wxProgram/qrcodeList", _page_param, function(data){
+			var list = data.data.list;
+			console.log(list);
+
+			$.each(data.data.scene_table, function(key, value){
+				search_box(value);
+			});
+
+			var html = '';
+			var html_cols = '';
+			$.each(data.data.dict_columns, function(key, value){
+				html_cols += `
+					<th>` + value.title + `</th>`;
+			});
+			html += `
+				<table class="layui-table">
+					<thead>
+						<tr>
+							<th>ID</th>
+							<!-- <th>标题</th>
+							<th>标识</th> -->
+							` + html_cols + `
+							<!-- <th>二维码</th> -->
+							<th>下载二维码</th>
+						</tr>
+					</thead>
+					<tbody>`;
+			$.each(list, function(key, value) {
+				var html_cols_val = '';
+				$.each(data.data.dict_columns, function(keyt, valuet){
+					html_cols_val += `
+							<td>` + value[valuet['columns_name']] + `</td>`;
+				});
+				html += `
+						<tr>
+							<td id="id_` + value.scene + `">` + value.id + `</td>
+							<!-- <td>` + value.scene_title + `</td>
+							<td>` + value.scene + `</td> -->
+							` + html_cols_val + `
+							<!-- <td>
+								<div class="flex-default">
+									<div>` + value.url + `</div>
+									<div id="qrcode-` + value.scene + `" name="qrcode_img" data-url="` + value.url + `" data-scene="` + value.scene + `" data-scene_title="` + value.scene_title + `" data-name="` + value.name + `" style="margin-left: 15px;"></div>
+								</div>
+							</td> -->
+							<td>
+								<div id="qrcode-` + value.scene + `" name="qrcode_img" data-url="` + value.url + `" data-scene="` + value.scene + `" data-scene_title="` + value.scene_title + `" data-name="` + value.name + `" style="margin-bottom: 5px;"></div>
+
+								<button class="layui-btn layui-btn-sm" onclick="savePic('qrcode-` + value.scene + `');">下载</button>
+								<button class="layui-btn layui-btn-sm" onclick="qrcode_img_one('qrcode-` + value.scene + `');">加载二维码</button>
+							</td>
+						</tr>`;
+			});
+			html += `
+					</tbody>
+				</table>`;
+			$("#qrcodeList").empty().append(html);
+
+			$("#clicks").html(`
+			<button class="layui-btn layui-btn-sm layui-btn-new" onclick="qrcodeClear();">重新生成</button>
+			<button class="layui-btn layui-btn-sm layui-btn-new" onclick="download();">批量下载二维码</button>`);
+
+			$(".txt-load").hide();
+		});
+		await qrcode_url();
+	}
+
+	async function qrcode_url(){
+		var qrcode_img = $("#qrcodeList").find("div[name='qrcode_img']");
+		for(i = 0; i < qrcode_img.length; i++){
+			var _url = $(qrcode_img[i]).data("url");
+			var _scene = $(qrcode_img[i]).data("scene");
+			var _scene_title = $(qrcode_img[i]).data("scene_title");
+			var _id = $(qrcode_img[i]).attr('id');
+			if(_url == ''){
+				await $.post(crm.api_local + "/wxProgram/qrcode", {scene: _scene, scene_title: _scene_title, wx_qrcode_group_id: _page_param['wx_qrcode_group_id']}, function(data){
+					$(qrcode_img[i]).qrcode({width: 120, height: 120, text: data.data.url});
+				});
+			}
+		}
+	}
+
+	function search_box(table_name){
+		crm.searchBox($("#search"), table_name, {}, 'searchPage();');
+	}
+
+	function searchPage(){
+		var search_list = {};
+		var search_input = $("#search").find("input");
+		$.each(search_input, function(){
+			search_list[$(this).attr('id')] = $(this).val();
+		});
+		_page_param.search_list = search_list;
+		console.log(_page_param);
+		$(".txt-load").show()
+		_init();
+	}
+
+	function qrcode_img(){
+		var qrcode_img = $("#qrcodeList").find("div[name='qrcode_img']");
+		for(i = 0; i < qrcode_img.length; i++){
+			var _url = $(qrcode_img[i]).data("url");
+			if(_url != ''){
+				$(qrcode_img[i]).qrcode({width: 120, height: 120, text: _url}).hide();
+			}
+		}
+	}
+
+	function qrcode_img_one(scene){
+		var objs = document.getElementById(scene);
+		var _url = $(objs).data("url");
+		var number = $(objs).children('canvas').length;
+		if(number > 0){
+			$(objs).show();
+		} else {
+			if(_url != ''){
+				$(objs).qrcode({width: 120, height: 120, text: _url});
+			}
+		}
+	}
+
+	function qrcodeClear(){
+		crm.post(crm.api_local + "/wxProgram/qrcodeClear", {wx_qrcode_group_id: _page_param['wx_qrcode_group_id']}, function(data){
+			window.location.reload();
+		});
+	}
+
+	function savePic(scene){
+		qrcode_img_one(scene);
+		let myCanvas = document.getElementById(scene).getElementsByTagName("canvas");
+		let a = document.createElement("a");
+		console.log(myCanvas )
+		a.href = myCanvas[0].toDataURL("image/png");
+		a.download = document.getElementById(scene).dataset.name;
+		a.click();
+	}
+	function download() {
+		layui.use('layer', function(){
+			layer.confirm('确定批量下载二维码吗？', { title: '温馨提示', }, function(index){
+				layer.close(index);
+				var indexs = layer.load(2);
+				qrcode_img();
+				//创建压缩包对象 jszip.js
+				var zip = new JSZip();
+				//获取到所有已经生成好的二维码
+				var canvases = $("#qrcodeList").find('canvas');
+				$.each(canvases, function (i, item) {
+					if(item.toDataURL('image/png') != -1){
+						var imgData = item.toDataURL('image/png').split('base64,')[1];
+						var picName = $(item).parent().data('name')
+						zip.file(picName + ".png", imgData, { base64: true });
+					}
+				});
+				//下载压缩包
+				zip.generateAsync({ type: "blob" }).then(function (content) {
+					console.log(content)
+					// see FileSaver.js
+					saveAs(content, "二维码.zip");
+				});
+
+				layer.closeAll();
+			})
+		});
+	}
+</script>
+</html>

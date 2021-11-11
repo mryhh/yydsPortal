@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>用户管理</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<table class="layui-table" id="user_list" lay-filter="user_list"></table>
+		<script type="text/html" id="barDemo">
+			<a class="layui-btn layui-btn-sm" lay-event="edit">编辑</a>
+		</script>
+	</div>
+</body>
+
+<script src="../_public/refresh.js"></script>
+<script type="text/javascript">
+	userList();
+
+	function userList(){
+		crm.post(crm.api_local + "/user/index", {}, function(data){
+			var  cols = [[
+				{ field:'id', title: 'ID', sort: true,  width: 150, },
+				{ field:'username', title: '账号', sort: true },
+				{ field:'nickname', title: '昵称',  sort: true, },
+				{ title:'操作', toolbar: '#barDemo', width: 150, }
+			]];
+			crm._table('#user_list', { list: data.list, cols }, function(table, form){
+				//监听行工具事件
+				table.on('tool(user_list)', function(obj){
+					if(obj.event === 'edit'){
+						xadmin.open('用户编辑', crm.app_local + '/User/edit.html?id=' + obj.data.id)
+					}
+				});
+			})
+			
+		});
+	}
+
+
+	
+</script>
+</html>
