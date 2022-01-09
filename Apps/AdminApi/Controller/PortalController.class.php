@@ -36,14 +36,14 @@ $_time[] = microtime();
 		foreach ($dict_columns as $key => $value) {
 			$dict_columns[$key]['columns_name'] = strtolower($dict_columns[$key]['columns_name']);
 
-			if($dict_columns[$key]['id'] == ''){
-				if($dict_columns[$key]['columns_name'] == 'id'){
-					$dict_columns[$key] = array('id'=>'', 'isactive'=>'Y', 'title'=>'可用', 'columns_name'=>'id', 'type'=>'text', 'type_value'=>'', 'data_type'=>'NUMBER', 'data_length'=>'8');
-				}else if($dict_columns[$key]['columns_name'] == 'creationdate'){
-					$dict_columns[$key] = array('id'=>'', 'isactive'=>'Y', 'title'=>'可用', 'columns_name'=>'creationdate', 'type'=>'text', 'type_value'=>'', 'data_type'=>'DATE', 'data_length'=>'4');
-				}else if($dict_columns[$key]['columns_name'] == 'modifieddate'){
-					$dict_columns[$key] = array('id'=>'', 'isactive'=>'Y', 'title'=>'可用', 'columns_name'=>'modifieddate', 'type'=>'text', 'type_value'=>'', 'data_type'=>'DATE', 'data_length'=>'4');
-				}else if($dict_columns[$key]['columns_name'] == 'isactive'){
+			if( $dict_columns[$key]['id'] == '' || is_null($dict_columns[$key]['id']) ){
+				if($dict_columns[$key]['column_name'] == 'id'){
+					$dict_columns[$key] = array('id'=>'', 'isactive'=>'Y', 'title'=>'ID', 'columns_name'=>'id', 'type'=>'text', 'type_value'=>'', 'data_type'=>'NUMBER', 'data_length'=>'8');
+				}else if($dict_columns[$key]['column_name'] == 'creationdate'){
+					$dict_columns[$key] = array('id'=>'', 'isactive'=>'Y', 'title'=>'创建时间', 'columns_name'=>'creationdate', 'type'=>'text', 'type_value'=>'', 'data_type'=>'DATE', 'data_length'=>'4');
+				}else if($dict_columns[$key]['column_name'] == 'modifieddate'){
+					$dict_columns[$key] = array('id'=>'', 'isactive'=>'Y', 'title'=>'编辑时间', 'columns_name'=>'modifieddate', 'type'=>'text', 'type_value'=>'', 'data_type'=>'DATE', 'data_length'=>'4');
+				}else if($dict_columns[$key]['column_name'] == 'isactive'){
 					$dict_columns[$key] = array('id'=>'', 'isactive'=>'Y', 'title'=>'可用', 'columns_name'=>'isactive', 'type'=>'radio', 'type_value'=>'', 'data_type'=>'CHAR', 'data_length'=>'1');
 				}else{
 					unset($dict_columns[$key]);
