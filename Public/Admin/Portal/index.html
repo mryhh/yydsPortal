@@ -154,6 +154,9 @@
 							}else if(value['type'] == 'select'){
 								_cols_tb += `
 									` + _val;
+								if(typeof value.type_value_arr == 'object'){
+									_cols_tb += ` (` + value.type_value_arr[_val] + `)`;
+								}
 							}else if(value['type'] == 'button'){
 								var _type_value = JSON.parse(value.type_value);
 								var _button_do = '';

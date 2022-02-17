@@ -36,7 +36,7 @@ $_time[] = microtime();
 		foreach ($dict_columns as $key => $value) {
 			$dict_columns[$key]['columns_name'] = strtolower($dict_columns[$key]['columns_name']);
 
-			if( $dict_columns[$key]['id'] == '' || is_null($dict_columns[$key]['id']) ){
+			if( $dict_columns[$key]['id'] == '' || is_null($dict_columns[$key]['id']) || $dict_columns[$key]['in_table'] != 'Y'){
 				if($dict_columns[$key]['column_name'] == 'id'){
 					$dict_columns[$key] = array('id'=>'', 'isactive'=>'Y', 'title'=>'ID', 'columns_name'=>'id', 'type'=>'text', 'type_value'=>'', 'data_type'=>'NUMBER', 'data_length'=>'8');
 				}else if($dict_columns[$key]['column_name'] == 'creationdate'){
@@ -53,6 +53,13 @@ $_time[] = microtime();
 			if($dict_columns[$key]['columns_name'] == 'id'){
 				$_order_by_child = " order by id desc";
 				$_order_by = "order by " . $data['table_name'] . ".id desc";
+			}
+
+			if( $dict_columns[$key]['type'] == 'select' && $dict_columns[$key]['type_value'] != '' ){
+				$_type_value = json_decode($dict_columns[$key]['type_value'], true);
+				foreach ($_type_value as $keyt => $valuet) {
+					$dict_columns[$key]['type_value_arr'][$valuet['select_option_value']] = $valuet['select_option_title'];
+				}
 			}
 			
 		}
@@ -90,22 +97,27 @@ $_time[] = microtime();
 		//外键
 		$all_source_joins = array();
 
-		$source_list = D('Dict')->colsSourceList($data['table_name'], " and t.isactive='Y' and dc1.data_type=dc2.data_type");
+		$cols_source_list = D('Dict')->colsSourceList($data['table_name'], " and t.isactive='Y'");
 $_time[] = microtime();
 		
 		$_join = '';
 		$_join_cols_str = '';
 		$_join_where = '';
-		if( !empty($source_list) ){
+		if( !empty($cols_source_list) ){
+
 			//mysql系统表中表名是小写导致url中表名是小写，保险期间把表名转一下  但是后面是不是好像不用判断表名是否相同...
 			$_table_name = strtoupper($data['table_name']);
 			//循环所有的外键表构建所需的数据
-			foreach ($source_list as $key => $value) {
+			foreach ($cols_source_list as $key => $value) {
+				if( $value['source_data_type'] !== $value['data_type'] && strpos($value['data_type'], $value['source_data_type']) === false && strpos($value['source_data_type'], $value['data_type']) === false ){
+					unset($cols_source_list[$key]);
+					continue;
+				}
 				$columns_name_info = explode( ' ', trim($value['columns_name']) );
 				$value['columns_name'] = strtolower($columns_name_info[0]);
 				if( isset($dict_columns_key[strtolower($value['columns_name'])]) ){
 					// $dict_columns_key[$value['columns_name']]['source_info'] = $value;
-					if($value['table_name'] == $_table_name && $value['source_cols_list'] != '' && $value['source_data_type'] == $value['data_type']){
+					if($value['table_name'] == $_table_name && $value['source_cols_list'] != ''){
 						$_join .= "
 left join " . $value['source_table_name'] . " " . $value['source_table_name'] . "_" . $key . " on " . $value['source_table_name'] . "_" . $key . "." . $value['source_columns_name'] . "=" . $value['table_name'] . "." . $value['columns_name'];
 						$_soure_cols_list = explode(';', $value['source_cols_list']);
@@ -157,7 +169,7 @@ $_time[] = microtime();
 				if( isset($dict_columns_key[strtolower($key)]) && $value != ''){
 					if( strpos($value, ';') === false ){
 						if( strpos($value, '=') === 0 ){
-							$where .= " and " . $key . " = '" . $value . "'";
+							$where .= " and " . $key . " = '" . ltrim($value, '=') . "'";
 						}else{
 							$where .= " and " . $key . " like '%" . $value . "%'";
 						}
@@ -240,7 +252,7 @@ where 1=1 " . $_join_where . "
 $_time[] = microtime();
 
 		// $this->ajaxReturn( array('code'=>'1', 'message'=>'ok', 'data'=>array('dict_columns'=>$dict_columns, 'list'=>$list, 'sql'=>"select id, isactive" . $cols_str . " from " . $data['table_name']), ) );
-		$this->ajaxReturn( array('code'=>'1', 'message'=>'ok', 'data'=>array('dict_columns'=>$dict_columns_key, 'list'=>$list, 'count'=>$count, 'source_list'=>$source_list, 'search_list'=>$search_list, 'all_source_joins'=>$all_source_joins ), 'sql'=>$sql, 'sql_count'=>$sql_count, 'time'=>$_time) );
+		$this->ajaxReturn( array('code'=>'1', 'message'=>'ok', 'data'=>array('dict_columns'=>$dict_columns_key, 'list'=>$list, 'count'=>$count, 'source_list'=>$cols_source_list, 'search_list'=>$search_list, 'all_source_joins'=>$all_source_joins ), 'sql'=>$sql, 'sql_count'=>$sql_count, 'time'=>$_time) );
 	}
 
 	public function edit(){
@@ -334,7 +346,11 @@ $_time[] = microtime();
 			$_cols_name = strtolower($value['column_name']);
 			if( strtolower($value['data_type']) == 'date' && $data[$_cols_name] != '' ){
 				$_cols_date = $data[$_cols_name];
-				$data[$_cols_name] = "to_date('" . date('Y-m-d H:i:s', strtotime($data[$_cols_name])) . "', 'YYYY-MM-DD HH24:MI:SS')";
+				if(DBTYPE == 'Oracle'){
+					$data[$_cols_name] = "to_date('" . date('Y-m-d H:i:s', strtotime($data[$_cols_name])) . "', 'YYYY-MM-DD HH24:MI:SS')";
+				}else if(DBTYPE == 'Mysql'){
+					$data[$_cols_name] = "DATE_FORMAT('" . date('Y-m-d H:i:s', strtotime($data[$_cols_name])) . "', '%y-%m-%d %H:%i:%s')";
+				}
 				$data_sync[$_cols_name] = date('Y-m-d H:i:s', strtotime($_cols_date));
 			}
 		}
@@ -354,7 +370,7 @@ $_time[] = microtime();
 				$id = $data['id'] = $res['lastInsID'];
 			}
 		//单个更新
-		}else if( $id === false ){
+		}else if( strpos($id, ';') === false ){
 			$res = $DataBase->updateDb("update " . $table_name . " set " . $DataBase->arr_str_upd($data, 'Y') . " where id = " . $id);
 			$type = 'edit';
 		//批量更新

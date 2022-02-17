@@ -119,8 +119,8 @@ class PortalModel{
 								}
 								$_source_table_info = $value;
 								$_source_cols_str = $_source_table_info['source_columns_name'] . ' as select_option_value,' . str_replace(";", ',', $_source_table_info['source_cols_list']) . ' as select_option_title';
-								$dict_columns_key[$value['columns_name']]['type_value_arr'] = $DataBase->selectDb("select " . $_source_cols_str . " from " . $_source_table_info['source_table_name'] . " where isactive='Y'" . $_where);
 								$dict_columns_key[$value['columns_name']]['sql'] = "select " . $_source_cols_str . " from " . $_source_table_info['source_table_name'] . " where isactive='Y'" . $_where;
+								$dict_columns_key[$value['columns_name']]['type_value_arr'] = $DataBase->selectDb($dict_columns_key[$value['columns_name']]['sql']);
 								if( $dict_columns_key[$value['columns_name']]['type'] != 'checkbox' ){
 									$dict_columns_key[$value['columns_name']]['type_value_arr'][] = array('select_option_value'=>'', 'select_option_title'=>'无');
 								}
@@ -311,7 +311,7 @@ class PortalModel{
 // left join " . $DataBase->db_columns_table . " dc1 on upper(t.source_columns_name)=dc1.column_name and t.source_table_name=dc1.table_name
 // left join " . $DataBase->db_columns_table . " dc2 on (upper(t.columns_name)=dc2.column_name or upper(substr(t.columns_name, 0, instr(t.columns_name, ' ')-1))=dc2.column_name) and t.table_name=dc2.table_name
 // where (upper(t.table_name)='" . strtoupper($table) . "') and t.isactive='Y' and dc1.data_type=dc2.data_type");
-		$cols_source_list = D('Dict')->colsSourceList($table, " and t.isactive='Y' and dc1.data_type=dc2.data_type");
+		$cols_source_list = D('Dict')->colsSourceList($table, " and t.isactive='Y'");
 
 		//如果当前表没有关联表 或者层数太多 返回false
 		if( empty($cols_source_list) ){
@@ -320,6 +320,10 @@ class PortalModel{
 		//如果关联上目标表 就返回 需要的数据
 		$rdata = array();
 		foreach ($cols_source_list as $key => $value) {
+			if( $value['source_data_type'] !== $value['data_type'] && strpos($value['data_type'], $value['source_data_type']) === false && strpos($value['source_data_type'], $value['data_type']) === false ){
+				unset($cols_source_list[$key]);
+				continue;
+			}
 			// if( strtolower($value['source_table_name']) == strtolower($source_table) && $value['source_data_type'] == $value['data_type'] ){
 			if( strtolower($value['source_table_name']) == strtolower($source_table) ){
 				if(	!isset($rdata) ){
@@ -425,7 +429,7 @@ class PortalModel{
 // left join " . $DataBase->db_columns_table . " dc2 on (upper(t.columns_name)=dc2.column_name or upper(substr(t.columns_name, 0, instr(t.columns_name, ' ')-1))=dc2.column_name) and t.table_name=dc2.table_name
 // left join dict_tables sdt on sdt.table_name=upper(t.source_table_name)
 // where (upper(t.table_name)='" . strtoupper($table) . "') and t.isactive='Y' and dc1.data_type=dc2.data_type");
-		$cols_source_list = D('Dict')->colsSourceList($table, " and t.isactive='Y' and dc1.data_type=dc2.data_type");
+		$cols_source_list = D('Dict')->colsSourceList($table, " and t.isactive='Y'");
 
 		//如果当前表没有关联表 或者层数太多 返回false
 		if( empty($cols_source_list) ){
@@ -435,6 +439,10 @@ class PortalModel{
 		$rdata = array();
 		$Portal = D("Portal");
 		foreach ($cols_source_list as $key => $value) {
+			if( $value['source_data_type'] !== $value['data_type'] && strpos($value['data_type'], $value['source_data_type']) === false && strpos($value['source_data_type'], $value['data_type']) === false ){
+				unset($cols_source_list[$key]);
+				continue;
+			}
 			// if( !isset($rdata[$value['source_table_name']]) ){
 				$_source_table_trees = $this->_source_table_trees($value['source_table_name'], $source_table, $num);
 

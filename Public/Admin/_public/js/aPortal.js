@@ -231,7 +231,7 @@ crm.searchBoxHtml = function(searchDoom, columns, searchValue={}, doSearch=''){
 		}
 
 		var html_input = `
-					<input class="layui-input" type="text" id="` + val.columns_name + `" value="` + (searchValue[val.columns_name] || '') + `">` + _source;
+					<input class="layui-input" type="text" id="` + val.columns_name + `" value="` + (searchValue[val.columns_name] ? ('=' + searchValue[val.columns_name]) : '') + `">` + _source;
 		if(val.type == 'radio'){
 			html_input = `
 					<select class="layui-input" id="` + val.columns_name + `">

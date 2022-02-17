@@ -41,12 +41,12 @@ return array(
 	'COMPANY_NAME'			=>	'1234',
 
 	//数据库
-	define('DBTYPE', 'Oracle'),
+	define('DBTYPE', 'Mysql'),
 	'DEFAULT_DB'			=>	array(
-		'DB_HOST'				=>	'127.0.0.1:1521',
-		'DB_USER'				=>	'yyds',
-		'DB_PWD'				=>	'oracle123',
-		'DB_NAME'				=>	'orcl',
+		'DB_HOST'				=>	'127.0.0.1:3306',
+		'DB_USER'				=>	'root',
+		'DB_PWD'				=>	'',
+		'DB_NAME'				=>	'test',
 	),
 
 	//OSS上传密钥
