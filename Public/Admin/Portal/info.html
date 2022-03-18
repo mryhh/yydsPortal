@@ -12,12 +12,12 @@
 
 <script src="../_public/refresh.js"></script>
 <script type="text/javascript">
-	var this_param = crm.getParam({id: '', table_name: ''});
+	var this_param = crm.getParam({id: '', table_name: '', event: ''});
 	var info_data = new Object();
 	userInfo();
 
 	function userInfo(){
-		crm.post(crm.api_local + "/Portal/info", {id: this_param.id, table_name: this_param.table_name}, function(data){
+		crm.post(crm.api_local + "/Portal/info", {id: this_param.id, table_name: this_param.table_name, event: this_param.event}, function(data){
 			info_data = data;
 			layui.use(['form', 'element','laydate'], function(){
 				var form = layui.form,

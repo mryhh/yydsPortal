@@ -50,7 +50,7 @@
 		if(_param_status){
 			$.each(_param, function(key, value){
 				if(key != 'table_name'){
-					search_list[key] = value;
+					search_list[key] = '=' + value;
 				}
 			});
 		}
@@ -67,6 +67,10 @@
 						{
 							title: '批量编辑',
 							id: '1'
+						},
+						{
+							title: '复制新增',
+							id: '2'
 						}
 					],
 					click: function(obj){
@@ -78,6 +82,16 @@
 							});
 							console.log(backDataId)
 							xadmin.open('批量编辑', crm.app_local + '/Portal/info.html?table_name='+ _param['table_name'] + '&id=' + backDataId);
+						}
+						if(obj.title == '复制新增'){
+							console.log(backData);
+							var backDataId = '';
+							$.each(backData, function(backDataKey, backDataVal){
+								backDataId = backDataKey;
+							});
+
+							console.log(backDataId)
+							xadmin.open('复制新增', crm.app_local + '/Portal/info.html?table_name='+ _param['table_name'] + '&id=' + backDataId + '&event=copy');
 						}
 					}
 				});
@@ -100,7 +114,7 @@
 						all_data[val.id] = val;
 						var _cols_tb = '';
 						$.each(data.dict_columns, function(key, value){
-							var _val = val[value['columns_name']];
+							var _val = val[value['columns_name']] || '';
 
 							var _min_width = 50;
 							var _width = '';
@@ -162,20 +176,24 @@
 								var _button_do = '';
 								var _params = '';
 
-								$.each(_type_value, function(keyt, valuet){
-									if( keyt != 'button_name' && keyt != 'button_href' && keyt != 'button_click' && keyt.indexOf('group_') != '-1' ){
-										if(_params == ''){
-											_params += `?` + valuet.button_param_key + `=` + (valuet.button_param_table == _param.table_name ? val[valuet.button_param_column] : valuet.button_param_value);
-										}else{
-											_params += `&` + valuet.button_param_key + `=` + (valuet.button_param_table == _param.table_name ? val[valuet.button_param_column] : valuet.button_param_value);
-										}
-									}
-								});
-
 								if(_type_value['button_href']){
+									$.each(_type_value, function(keyt, valuet){
+										if( keyt != 'button_name' && keyt != 'button_href' && keyt != 'button_click' && keyt.indexOf('group_') != '-1' ){
+											if(_params == ''){
+												_params += `?` + valuet.button_param_key + `=` + (valuet.button_param_table == _param.table_name ? val[valuet.button_param_column] : valuet.button_param_value);
+											}else{
+												_params += `&` + valuet.button_param_key + `=` + (valuet.button_param_table == _param.table_name ? val[valuet.button_param_column] : valuet.button_param_value);
+											}
+										}
+									});
 									_button_do += ` onclick="window.open('` + crm.app_local + _type_value['button_href'] + _params + `');"`;
 								}else if(_type_value['button_click']){
-
+									$.each(_type_value, function(keyt, valuet){
+										if( keyt != 'button_name' && keyt != 'button_href' && keyt != 'button_click' && keyt.indexOf('group_') != '-1' ){
+												_params += `/` + valuet.button_param_key + `/` + (valuet.button_param_table.toUpperCase() == _param.table_name ? val[valuet.button_param_column] : valuet.button_param_value);
+										}
+									});
+									_button_do += ` onclick="window.open('` + crm.api_local + _type_value['button_click'] + _params + `');"`;
 								}
 								_cols_tb += `
 										<button type="button" name="` + key + `" class="layui-btn layui-btn-sm" ` + _button_do + `>` + _type_value['button_name'] + `</button>`;
@@ -184,7 +202,7 @@
 										<img name="` + key + `" src="` + _val + `">`;
 							}else{
 								_cols_tb += `
-									` + _val;
+										<div class="max_text">` + _val + `</div>`;
 							}
 							_cols_tb += _source_button + _source_cols_list + `
 									</div>

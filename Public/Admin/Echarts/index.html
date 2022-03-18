@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>查看报表</title>
+	<script src="../_public/head.js"></script>
+</head>
+<body>
+	<div class="x-body">
+		<div class="obj-array" class="layui-container" style="width:100%;">
+			<div id="obj_arr" class="layui-row">
+				
+			</div>
+		</div>
+	</div>
+</body>
+
+<script src="../_public/reback.js"></script>
+<script src="../_public/refresh.js"></script>
+<script src="../_public/js/echarts.min.js"></script>
+
+<script type="text/javascript">
+	var this_param = crm.getParam({p_product_id: ''});
+
+	var time_select_option = {
+		hours: '时',
+		day: '天',
+		week: '周',
+		month: '月',
+		year: '年',
+	};
+
+	tableList();
+	
+	//初始化页面
+	function tableList(){
+		crm.post(
+			crm.api_local + '/Echarts/index', 
+			{}, 
+			function(res){
+				$.each(res.echarts_list, function(key, value){
+					var time_option = '';
+					$.each(time_select_option, function(keyt, valuet){
+						var _selected = '';
+						if(keyt == value._type.time.time_unit){
+							_selected = ` selected="selected"`;
+						}
+						time_option += `<option value="` + keyt + `"` + _selected + `>` + valuet + `</option>`
+					});
+					var html = `
+				<div class="layui-col-md6" style="padding:0 5%;">
+					<div class="layui-form-item">
+						<label class="layui-form-label" style="width:50%;">
+							时间筛选
+						</label>
+						<div class="layui-input-inline" style="width:10%;">
+							<input type="text" value="` + value._type.time.time_val + `" id="time_` + key + `_val" class="layui-input">
+						</div>
+						<div class="layui-input-inline" style="width:10%;">
+							<select class="layui-input" id="time_` + key + `_unit">
+								` + time_option + `
+							</select>
+						</div>
+						<div class="layui-input-inline" style="width:15%;">
+							<button type="button" class="layui-btn" onclick="reloadData(` + key + `)">确定</button>
+						</div>
+					</div>
+					<div id="box_` + key + `" style="margin-top:-25px;">
+					</div>
+				</div>`;
+					$("#obj_arr").append(html);
+
+					doCharts(key, value);
+				});
+			}
+		);
+	}
+
+	//重载数据
+	function reloadData(key){
+		crm.post(
+			crm.api_local + '/Echarts/index', 
+			{
+				time_val: $('#time_' + key + '_val').val(), 
+				time_unit: $('#time_' + key + '_unit').val(),
+				seq: key,
+			}, 
+			function(res){
+				$.each(res.echarts_list, function(key, value){
+					doCharts(key, value);
+				});
+			}
+		);
+	}
+
+	//
+	function doCharts(key, option){
+		var _height = '500px';
+		if(option.yAxis.type == 'category'){
+			var _height = (option.legend.data.length * option.yAxis.data.length * 35) + 'px';
+		}
+
+		option['grid'] = {
+			top: option.legend.data.length * 10 + 'px',
+			// containLabel: true,
+		};
+		$("#box_" + key).html(`<div id="echarts_` + key + `" style="width:100%; height:` + _height + `"></div>`);
+		var chartDom = document.getElementById('echarts_' + key);
+		var myChart = echarts.init(chartDom);
+		myChart.setOption(option);
+	}
+</script>

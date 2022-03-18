@@ -39,7 +39,7 @@
 					{ field: 'seq', title: '排序', /*sort: true,*/ width: 70, 
 						templet: function(d){
 							return `
-								<input class="layui-input" type="text" name="" value="` + d.seq + `" oninput="editInput(event, this, '` + d.column_name + `', 'seq');">`;
+								<input class="layui-input" type="text" name="" value="` + (d.seq || '') + `" oninput="editInput(event, this, '` + d.column_name + `', 'seq');">`;
 						}, 
 					},
 					{ field: 'id', title: 'ID', /*sort: true,*/ width: 70, },
@@ -48,13 +48,13 @@
 					{ field: 's_data_type', title: '字段类型', },
 					{ field: 'title', title: '字典注释', /*edit: 'text',*/ 
 						templet: function(d){
-							return `<input class="layui-input" type="text" name="" value="` + d.title + `" oninput="editInput(event, this, '` + d.column_name + `', 'title');">`;
+							return `<input class="layui-input" type="text" name="" value="` + (d.title || '') + `" oninput="editInput(event, this, '` + d.column_name + `', 'title');">`;
 						}, 
 					},
 					{ field: 'notes', title: '备注', /*edit: 'text',*/ 
 						templet: function(d){
 							return `
-								<input class="layui-input" type="text" name="" value="` + d.notes + `" oninput="editInput(event, this, '` + d.column_name + `', 'notes');">`;
+								<input class="layui-input" type="text" name="" value="` + (d.notes || '') + `" oninput="editInput(event, this, '` + d.column_name + `', 'notes');">`;
 						}, 
 					},
 					{ field: 'type', title: '类型', 
@@ -86,10 +86,15 @@
 							return html;
 						}, 
 					},
-					{ field: 'type_value', title: '类型值', /*edit: 'text',*/ 
+					{ field: 'type_value', title: '类型值', /*edit: 'text', */
 						templet: function(d){
+							// var _value = encodeURI(d.type_value);
+							var _value = '';
+							if(d.type_value && d.type_value != ''){
+								_value = '点击修改';
+							}
 							return `
-								<input class="layui-input" type="text" name="" value="` + encodeURI(d.type_value) + `" onclick="open_type_value('` + d.column_name + `');" readonly="readonly">`;
+								<input class="layui-input" type="text" name="" value="` + _value + `" onclick="open_type_value('` + d.column_name + `');" readonly="readonly">`;
 						}, 
 					},
 					{ field: 'in_table', title: '列表中显示', width: 100, 
@@ -180,7 +185,7 @@
 				if (list[i].column_name == column_name) {
 					_type = list[i].type;
 					if(list[i].type_value){
-						_type_value = JSON.parse(list[i].type_value);
+						_type_value = JSON.parse(list[i].original_type_value);
 					}else{
 						_type_value = new Object();
 					}
@@ -547,6 +552,7 @@
 					// });
 					// list[i]['type_value'] = JSON.stringify(_type_values);
 					list[i]['type_value'] = JSON.stringify(_type_value);
+					list[i]['original_type_value'] = JSON.stringify(_type_value);
 				}
 			}
 			console.log(list);

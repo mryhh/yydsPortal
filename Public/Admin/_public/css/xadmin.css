@@ -712,6 +712,11 @@ table th, table td {
     width: 100%;
     box-sizing: border-box;
 }
+.max_text{
+	max-height: 480px;
+	overflow-y: auto;
+	max-width: 800px;
+}
 .flex-justify{
 	display: -webkit-box;
     display: -webkit-flex;

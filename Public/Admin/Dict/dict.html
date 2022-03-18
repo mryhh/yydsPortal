@@ -52,12 +52,12 @@
 					{ field: 'comments', title: '数据库注释', },
 					{ field: 'title', title: '字典注释', /*edit: 'text',*/ 
 						templet: function(d){
-							return `<input class="layui-input" type="text" name="" value="` + d.title + `" oninput="editInput(event, this, '` + d.table_name + `', 'title');">`;
+							return `<input class="layui-input" type="text" name="" value="` + (d.title || '') + `" oninput="editInput(event, this, '` + d.table_name + `', 'title');">`;
 						}, 
 					},
 					{ field: 'notes', title: '备注', /*edit: 'text',*/ 
 						templet: function(d){
-							return `<input class="layui-input" type="text" name="" value="` + d.notes + `" oninput="editInput(event, this, '` + d.table_name + `', 'notes');">`;
+							return `<input class="layui-input" type="text" name="" value="` + (d.notes || '') + `" oninput="editInput(event, this, '` + d.table_name + `', 'notes');">`;
 						}, 
 					},
 					{ field: 'is_menu', title: '是否菜单', width: 120, /*sort: true,*/ 

@@ -24,7 +24,7 @@ class MysqlModel{
 		$db_name != '' ? ( $db_info = C($db_name) ) : ( $db_info = C('DEFAULT_DB') );
 
 		//连接
-		$Model = M('', '', 'mysql://' . $db_info['DB_USER'] . ':' . $db_info['DB_PWD'] . '@' . $db_info['DB_HOST'] . '/' . $db_info['DB_NAME'] . '#utf8');
+		$Model = M('', '', 'mysql://' . $db_info['DB_USER'] . ':' . $db_info['DB_PWD'] . '@' . $db_info['DB_HOST'] . '/' . $db_info['DB_NAME'] . '#utf8mb4');
 		if (!$Model) {
 			$this->ajaxReturn(
 				array(
@@ -199,6 +199,7 @@ class MysqlModel{
 			}else{
 				//自动检测
 				if($auto_detection == 'Y'){
+					$value = (string)$value;
 					//自动检测函数
 					if( strpos($value, "('") !== false && strpos($value, "')") !== false ){
 						$str_value = $str_value . $value . ", ";
@@ -294,6 +295,7 @@ values
 			}else{
 				//自动检测
 				if($auto_detection == 'Y'){
+					$value = (string)$value;
 					//自动检测函数
 					if( strpos($value, "('") !== false && strpos($value, "')") !== false ){
 						$str = $str . $key . " = " . $value . ", ";
@@ -335,6 +337,7 @@ values
 			}else{
 				//自动检测
 				if($auto_detection == 'Y'){
+					$value = (string)$value;
 					//自动检测函数
 					if( strpos($value, "('") !== false && strpos($value, "')") !== false ){
 						$str = $str . $key . " = " . $value . " and ";

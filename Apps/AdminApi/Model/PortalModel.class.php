@@ -72,6 +72,13 @@ class PortalModel{
 					);
 				}
 			}
+
+			//处理copy
+			if($data['event']){
+				if($data['event'] == 'copy'){
+					$info['id'] = 'copy' . $data['id'];
+				}
+			}
 		}else{
 			$dict_columns_init['id'] = 'new';
 			$dict_columns_init['isactive'] = 'Y';
@@ -90,6 +97,7 @@ class PortalModel{
 		}
 
 		//外键
+		$source_list = array();
 		if( $source ){
 			$source_list = $DataBase->selectDb("select id,table_name,columns_name,upper(source_table_name) as source_table_name,source_columns_name,source_cols_list from dict_columns_source where (upper(table_name)='" . strtoupper($data['table_name']) . "') and isactive='Y'");
 			if( !empty($source_list) ){
@@ -295,6 +303,65 @@ class PortalModel{
 		return array('code'=>'1', 'message'=>'ok', 'data'=>array('sync_res'=>$sync_res, 'success_datas'=>$success_datas, 'active_success_res'=>$active_success_res),);
 	}
 
+	//列表外键
+	public function index_source($table_name='', $data_authority='', $dict_columns_key=''){
+		//外键
+		$all_source_joins = array();
+
+		$cols_source_list = D('Dict')->colsSourceList($table_name, " and t.isactive='Y'");
+$_time[] = microtime();
+		
+		$_join = '';
+		$_join_cols_str = '';
+		$_join_where = '';
+		if( !empty($cols_source_list) ){
+			//mysql系统表中表名是小写导致url中表名是小写，保险期间把表名转一下  但是后面是不是好像不用判断表名是否相同...
+			$_table_name = strtoupper($table_name);
+			//循环所有的外键表构建所需的数据
+			foreach ($cols_source_list as $key => $value) {
+				if( $value['source_data_type'] !== $value['data_type'] && strpos($value['data_type'], $value['source_data_type']) === false && strpos($value['source_data_type'], $value['data_type']) === false ){
+					unset($cols_source_list[$key]);
+					continue;
+				}
+				$columns_name_info = explode( ' ', trim($value['columns_name']) );
+				$value['columns_name'] = strtolower($columns_name_info[0]);
+				if( isset($dict_columns_key[strtolower($value['columns_name'])]) ){
+					// $dict_columns_key[$value['columns_name']]['source_info'] = $value;
+					if($value['table_name'] == $_table_name && $value['source_cols_list'] != ''){
+						$_join .= "
+left join " . $value['source_table_name'] . " " . $value['source_table_name'] . "_" . $key . " on " . $value['source_table_name'] . "_" . $key . "." . $value['source_columns_name'] . "=" . $value['table_name'] . "." . $value['columns_name'];
+						$_soure_cols_list = explode(';', $value['source_cols_list']);
+						foreach ($_soure_cols_list as $keyt => $valuet) {
+							$_source_source = explode('.', $valuet);
+							//包含.  不是本表，多级关联
+							if(count($_source_source) > 1){
+								$_source_joins = D('Portal')->_source_table_tree($value['source_table_name'], $_source_source[0], 0, $value['source_table_name'] . "_" . $key, $data_authority);
+								$all_source_joins[] = $_source_joins;
+								$_join .= $_source_joins['join'];
+								$_join_cols_str .= $_source_joins['select_cols'];
+								// $value['source_cols_list_arr'] = array_merge($value['source_cols_list_arr'], $_source_joins['select_cols_list']);
+								// $value['source_cols_list_arr'] = $_source_joins['select_cols_list'];
+								foreach ($_source_joins['select_cols_list'] as $keytt => $valuett) {
+									$value['source_cols_list_arr'][] = $valuett;
+								}
+								foreach ($_source_joins['where_list'] as $keytt => $valuett) {
+									$_join_where .= $valuett;
+								}
+							}else{
+								$_soure_cols_name = strtolower($value['source_table_name'] . "_" . $key) . "_" . $valuet;
+								$_join_cols_str .= ',' . $value['source_table_name'] . "_" . $key . "." . $valuet . " as " . $_soure_cols_name;
+								$value['source_cols_list_arr'][] = $_soure_cols_name;
+							}
+						}
+					}
+					$dict_columns_key[$value['columns_name']]['source_info'] = $value;
+				}
+			}
+		}
+
+		return array('_join'=>$_join, 'all_source_joins'=>$all_source_joins, '_join_cols_str'=>$_join_cols_str, 'dict_columns_key'=>$dict_columns_key, 'cols_source_list'=>$cols_source_list, '_join_where'=>$_join_where);
+	}
+
 	//递归找出两个表的外键关联
 	public function _source_table_tree($table, $source_table, $num=0, $table_join_name='', $data_authority=''){
 		$DataBase = D(DBTYPE);
@@ -446,7 +513,7 @@ class PortalModel{
 			// if( !isset($rdata[$value['source_table_name']]) ){
 				$_source_table_trees = $this->_source_table_trees($value['source_table_name'], $source_table, $num);
 
-				$_table_info = $Portal->info( array('table_name'=>$value['source_table_name']), true, false );
+				$_table_info = $Portal->info( array('table_name'=>$value['source_table_name']), false, false );
 
 				// $rdata[$value['columns_name']] = $_table_info['data']['dict_columns'];
 				foreach ($_table_info['data']['dict_columns'] as $keyt => $valuet) {

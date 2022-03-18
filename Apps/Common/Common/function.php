@@ -1,6 +1,6 @@
 <?php
 
-	function curls($method,$url,$data){
+	function curls($method, $url, $data){
 		$curl = curl_init();
 		curl_setopt($curl, CURLOPT_URL, $url);
 		if($method == 'post'){
@@ -20,7 +20,7 @@
 	/**
 	* curl请求
 	*/
-	function bj_curls($method="",$url="",$data=""){
+	function bj_curls($method="", $url="", $data=""){
 		$data = http_build_query($data);
 		$curl = curl_init();
 		curl_setopt_array($curl, array(
@@ -46,7 +46,32 @@
 	/**
 	* curl请求
 	*/
-	function v3_curls($method="",$url="",$data="",$header=array()){
+	function jg_curls($method="", $url="", $data=""){
+		$data = http_build_query($data);
+		$curl = curl_init();
+		curl_setopt_array($curl, array(
+			CURLOPT_URL => $url,
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_ENCODING => '',
+			CURLOPT_MAXREDIRS => 10,
+			CURLOPT_TIMEOUT => 0,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+			CURLOPT_CUSTOMREQUEST => $method,
+			CURLOPT_POSTFIELDS => $data,
+			CURLOPT_HTTPHEADER => array(
+				'Content-Type: application/json',
+			),
+		));
+		$response = curl_exec($curl);
+		curl_close($curl);
+		return $response;
+	}
+
+	/**
+	* curl请求
+	*/
+	function v3_curls($method="", $url="", $data="", $header=array()){
 		$data = http_build_query($data);
 		$curl = curl_init();
 		curl_setopt_array($curl, array(
@@ -127,7 +152,7 @@
 		$p = count($data); 
 		$n = 0; 
 		for ($i=0; $i < $p ; $i++) { 
-			for($array = strtok($data,$singles); $array != ""; $array = strtok($singles)) 
+			for($array = strtok($data, $singles); $array != ""; $array = strtok($singles)) 
 			{ 
 				$arr[$n] = $array; 
 				$n++; 
@@ -296,7 +321,7 @@
 			}
 		}
 
-		return $res;
+		return rtrim($res, $single);
 	}
 
 	//二维数组的某字段 是否 是 某个字符串

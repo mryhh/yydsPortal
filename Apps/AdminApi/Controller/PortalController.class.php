@@ -30,7 +30,6 @@ $_time[] = microtime();
 $_time[] = microtime();
 
 		//创建没有配置 却要 默认出现的 字段
-		// $is_columns_id = 'N';
 		$_order_by_child = "";
 		$_order_by = "";
 		foreach ($dict_columns as $key => $value) {
@@ -50,7 +49,7 @@ $_time[] = microtime();
 				}
 			}
 
-			if($dict_columns[$key]['columns_name'] == 'id'){
+			if($dict_columns[$key]['column_name'] == 'id'){
 				$_order_by_child = " order by id desc";
 				$_order_by = "order by " . $data['table_name'] . ".id desc";
 			}
@@ -84,7 +83,11 @@ $_time[] = microtime();
 			}
 			if( $value['type'] == 'singleUpload' ){
 				$_OSS = C('OSS');
-				$value['columns_name'] = "'" . $_OSS['LOCAL'] . "' || " . $value['columns_name'] . " as " . $value['columns_name'];
+				if(DBTYPE == 'Oracle'){
+					$value['columns_name'] = "'" . $_OSS['LOCAL'] . "' || " . $value['columns_name'] . " as " . $value['columns_name'];
+				}else if(DBTYPE == 'Mysql'){
+					$value['columns_name'] = "concat('" . $_OSS['LOCAL'] . "', " . $value['columns_name'] . ") as " . $value['columns_name'];
+				}
 			}
 			
 			$cols_str .= ', ' . $value['columns_name'];
@@ -94,59 +97,16 @@ $_time[] = microtime();
 		//权限控制
 		$data_authority = $this->_c_data_authority;
 
-		//外键
-		$all_source_joins = array();
-
-		$cols_source_list = D('Dict')->colsSourceList($data['table_name'], " and t.isactive='Y'");
-$_time[] = microtime();
+		//列表类 外键方法
+		$index_source = D("Portal")->index_source($data['table_name'], $data_authority, $dict_columns_key);
+		$_join = $index_source['_join'];
+		$all_source_joins = $index_source['all_source_joins'];
+		$_join_cols_str = $index_source['_join_cols_str'];
+		$dict_columns_key = $index_source['dict_columns_key'];
+		$cols_source_list = $index_source['cols_source_list'];
+		$_join_where = $index_source['_join_where'];
+		// array('_join'=>$_join, 'all_source_joins'=>$all_source_joins, '_join_cols_str'=>$_join_cols_str, 'dict_columns_key'=>$dict_columns_key);
 		
-		$_join = '';
-		$_join_cols_str = '';
-		$_join_where = '';
-		if( !empty($cols_source_list) ){
-
-			//mysql系统表中表名是小写导致url中表名是小写，保险期间把表名转一下  但是后面是不是好像不用判断表名是否相同...
-			$_table_name = strtoupper($data['table_name']);
-			//循环所有的外键表构建所需的数据
-			foreach ($cols_source_list as $key => $value) {
-				if( $value['source_data_type'] !== $value['data_type'] && strpos($value['data_type'], $value['source_data_type']) === false && strpos($value['source_data_type'], $value['data_type']) === false ){
-					unset($cols_source_list[$key]);
-					continue;
-				}
-				$columns_name_info = explode( ' ', trim($value['columns_name']) );
-				$value['columns_name'] = strtolower($columns_name_info[0]);
-				if( isset($dict_columns_key[strtolower($value['columns_name'])]) ){
-					// $dict_columns_key[$value['columns_name']]['source_info'] = $value;
-					if($value['table_name'] == $_table_name && $value['source_cols_list'] != ''){
-						$_join .= "
-left join " . $value['source_table_name'] . " " . $value['source_table_name'] . "_" . $key . " on " . $value['source_table_name'] . "_" . $key . "." . $value['source_columns_name'] . "=" . $value['table_name'] . "." . $value['columns_name'];
-						$_soure_cols_list = explode(';', $value['source_cols_list']);
-						foreach ($_soure_cols_list as $keyt => $valuet) {
-							$_source_source = explode('.', $valuet);
-							if(count($_source_source) > 1){
-								$_source_joins = D('Portal')->_source_table_tree($value['source_table_name'], $_source_source[0], 0, $value['source_table_name'] . "_" . $key, $data_authority);
-								$all_source_joins[] = $_source_joins;
-								$_join .= $_source_joins['join'];
-								$_join_cols_str .= $_source_joins['select_cols'];
-								// $value['source_cols_list_arr'] = array_merge($value['source_cols_list_arr'], $_source_joins['select_cols_list']);
-								// $value['source_cols_list_arr'] = $_source_joins['select_cols_list'];
-								foreach ($_source_joins['select_cols_list'] as $keytt => $valuett) {
-									$value['source_cols_list_arr'][] = $valuett;
-								}
-								foreach ($_source_joins['where_list'] as $keytt => $valuett) {
-									$_join_where .= $valuett;
-								}
-							}else{
-								$_soure_cols_name = strtolower($value['source_table_name'] . "_" . $key) . "_" . $valuet;
-								$_join_cols_str .= ',' . $value['source_table_name'] . "_" . $key . "." . $valuet . " as " . $_soure_cols_name;
-								$value['source_cols_list_arr'][] = $_soure_cols_name;
-							}
-						}
-					}
-					$dict_columns_key[$value['columns_name']]['source_info'] = $value;
-				}
-			}
-		}
 $_time[] = microtime();
 
 		if($data_list == 'Y'){
@@ -174,9 +134,14 @@ $_time[] = microtime();
 							$where .= " and " . $key . " like '%" . $value . "%'";
 						}
 					}else{
-						$value = str_replace(';', "','", $value);
-						$value = rtrim($value, "','");
-						$where .= " and " . $key . " in ('" . $value . "')";
+						if( strpos($value, '=') === 0 ){
+							$value = str_replace(';', "','", ltrim($value, '='));
+							$value = rtrim($value, "','");
+							$where .= " and " . $key . " in ('" . $value . "')";
+						}else{
+							$value = rtrim($value, ';');
+							$where .= " and (" . $key . " like '%" . str_replace(";", "%' or " . $key . " like '%", $value) . "%')";
+						}
 					}
 				}
 			}
@@ -295,6 +260,7 @@ $_time[] = microtime();
 		$params = $this->_checkParam( array('table_name'=>'') );
 
 		$params['id'] = I('post.id');
+		$params['event'] = I('post.event');
 
 		//权限控制
 		$data_authority = $this->_c_data_authority;
@@ -344,23 +310,41 @@ $_time[] = microtime();
 		$cols_list = D('Dict')->columns("where t.column_name not in ('creationdate', 'modifieddate', 'ownerid', 'modifierid', 'CREATIONDATE', 'MODIFIEDDATE', 'OWNERID', 'MODIFIERID') and t.table_name = '" . $table_name . "'");
 		foreach ($cols_list as $key => $value) {
 			$_cols_name = strtolower($value['column_name']);
-			if( strtolower($value['data_type']) == 'date' && $data[$_cols_name] != '' ){
-				$_cols_date = $data[$_cols_name];
-				if(DBTYPE == 'Oracle'){
-					$data[$_cols_name] = "to_date('" . date('Y-m-d H:i:s', strtotime($data[$_cols_name])) . "', 'YYYY-MM-DD HH24:MI:SS')";
-				}else if(DBTYPE == 'Mysql'){
-					$data[$_cols_name] = "DATE_FORMAT('" . date('Y-m-d H:i:s', strtotime($data[$_cols_name])) . "', '%y-%m-%d %H:%i:%s')";
+			if( strtolower($value['data_type']) == 'date' ){
+				if( $data[$_cols_name] != '' ){
+					$_cols_date = $data[$_cols_name];
+					if(DBTYPE == 'Oracle'){
+						$data[$_cols_name] = "to_date('" . date('Y-m-d H:i:s', strtotime($data[$_cols_name])) . "', 'YYYY-MM-DD HH24:MI:SS')";
+					}else if(DBTYPE == 'Mysql'){
+						$data[$_cols_name] = "DATE_FORMAT('" . date('Y-m-d H:i:s', strtotime($data[$_cols_name])) . "', '%y-%m-%d %H:%i:%s')";
+					}
+					$data_sync[$_cols_name] = date('Y-m-d H:i:s', strtotime($_cols_date));
+				}else{
+					unset($data[$_cols_name]);
 				}
-				$data_sync[$_cols_name] = date('Y-m-d H:i:s', strtotime($_cols_date));
 			}
 		}
 
 		//新增或者编辑
-		if($id == 'new'){
+		if( $id == 'new' || strpos($id, 'copy') !== false ){
 			//mysql的id在插入之后获取
 			if(DBTYPE == 'Oracle'){
 				$id_res = $DataBase->selectDb("select get_sequences('" . $table_name . "') as id from dual");
 				$id = $data['id'] = $id_res[0]['id'];
+			}
+
+			if( strpos($id, 'copy') !== false ){
+				$dict_columns = D('Dict')->columns("where t.table_name='" . $table_name . "'");
+				$copy_info = $DataBase->selectDb('select ' . join_value(',', $dict_columns, 'column_name') . ' from ' . $table_name . ' where id = ' . str_replace('copy', '', $id));
+				if( empty($copy_info) ){
+					$this->ajaxReturn( array('code'=>'-1', 'message'=>'未找到源数据', 'data'=>array('copy_info'=>$copy_info, ),) );
+				}
+				foreach ($copy_info[0] as $key => $value) {
+					if( !isset($data[strtolower($key)]) ){
+						$data[$key] = $value;
+					}
+				}
+				unset($data['id']);
 			}
 			
 			$res = $DataBase->updateDb("insert into " . $table_name . " " . $DataBase->arr_str_add($data, 'Y'));

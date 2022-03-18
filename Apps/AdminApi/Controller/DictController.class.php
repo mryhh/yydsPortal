@@ -36,6 +36,13 @@ class DictController extends CommController {
 
 		$list = D('Dict')->columns("where t.column_name not in ('creationdate', 'modifieddate', 'ownerid', 'modifierid', 'CREATIONDATE', 'MODIFIEDDATE', 'OWNERID', 'MODIFIERID') and t.table_name = '" . $table_name . "'");
 
+		foreach ($list as $key => $value) {
+			if( $value['type_value'] && $value['type_value'] != '' ){
+				$list[$key]['type_value'] = htmlspecialchars($value['type_value']);
+				$list[$key]['original_type_value'] = $value['type_value'];
+			}
+		}
+
 		$this->ajaxReturn( array('code'=>'1', 'message'=>'ok', 'data'=>$list) );
 	}
 
@@ -90,9 +97,10 @@ class DictController extends CommController {
 		if($in_table != ''){
 			$data['in_table'] = $in_table;
 		}
-		$type_value = I('post.type_value');
+		// $type_value = I('post.type_value');
+		$type_value = I('post.original_type_value');
 		if($type_value != ''){
-			$data['type_value'] = htmlspecialchars_decode( $type_value );
+			$data['type_value'] = str_replace("'", "''", htmlspecialchars_decode( $type_value ) );
 		}
 		$col_seq = I('post.seq');
 		if($col_seq != ''){
