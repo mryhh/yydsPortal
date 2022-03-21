@@ -716,6 +716,7 @@ table th, table td {
 	max-height: 480px;
 	overflow-y: auto;
 	max-width: 800px;
+	overflow-x: hidden;
 }
 .flex-justify{
 	display: -webkit-box;
