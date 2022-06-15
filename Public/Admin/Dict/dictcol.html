@@ -215,7 +215,7 @@
 				var _group_nums_t = '';
 				$.each(_type_value, function(key, value){
 					if( key.indexOf('group_') >= 0 ){
-						_group_nums_t = key.split('group_')[1];
+						_group_nums_t = parseInt(key.split('group_')[1]);
 						_group_nums = _group_nums_t > _group_nums ? _group_nums_t : _group_nums;
 
 						html += `

@@ -328,8 +328,9 @@ $_time[] = microtime();
 				if( isset($dict_columns_key[strtolower($value['columns_name'])]) ){
 					// $dict_columns_key[$value['columns_name']]['source_info'] = $value;
 					if($value['table_name'] == $_table_name && $value['source_cols_list'] != ''){
+						$source_wheres = $value['source_wheres'] ? (' ' . str_replace($value['source_table_name'], $value['source_table_name'] . "_" . $key, $value['source_wheres'])) : '';
 						$_join .= "
-left join " . $value['source_table_name'] . " " . $value['source_table_name'] . "_" . $key . " on " . $value['source_table_name'] . "_" . $key . "." . $value['source_columns_name'] . "=" . $value['table_name'] . "." . $value['columns_name'];
+left join " . $value['source_table_name'] . " " . $value['source_table_name'] . "_" . $key . " on " . $value['source_table_name'] . "_" . $key . "." . $value['source_columns_name'] . "=" . $value['table_name'] . "." . $value['columns_name'] . $source_wheres;
 						$_soure_cols_list = explode(';', $value['source_cols_list']);
 						foreach ($_soure_cols_list as $keyt => $valuet) {
 							$_source_source = explode('.', $valuet);
@@ -432,8 +433,9 @@ left join " . $value['source_table_name'] . " " . $value['source_table_name'] . 
 						$_soure_cols_list = $_soure_cols_list[0];
 					}
 
+					$source_wheres = $value['source_wheres'] ? (' ' . str_replace($source_table, $_table_as, $value['source_wheres'])) : '';
 					$rdata['join'] .= "
-		left join " . $source_table . " " . $_table_as . " on " . $_table_as . "." . $value['source_columns_name'] . "=" . $table_join_name . "." . $_columns_name;
+		left join " . $source_table . " " . $_table_as . " on " . $_table_as . "." . $value['source_columns_name'] . "=" . $table_join_name . "." . $_columns_name . $source_wheres;
 					$rdata['select_cols'] .= ', ' . $_table_as . "." . $_soure_cols_list . ' as ' . $_table_as . "_" . $_soure_cols_list;
 					$rdata['select_cols_list'][] = $_table_as . "_" . $_soure_cols_list;
 				}
@@ -457,8 +459,9 @@ left join " . $value['source_table_name'] . " " . $value['source_table_name'] . 
 					$rdata['join'] = "
 	" . $value['source_table_name'] . " " . $value['_source_table_name'] . $_source_table_tree['join'];
 				}else{
+					$source_wheres = $value['source_wheres'] ? (' ' . str_replace($value['source_table_name'], $value['_source_table_name'], $value['source_wheres'])) : '';
 					$rdata['join'] = "
-	left join " . $value['source_table_name'] . " " . $value['_source_table_name'] . " on " . $value['_source_table_name'] . "." . $value['source_columns_name'] . "=" . $table_join_name . "." . $value['columns_name'] . $_source_table_tree['join'];
+	left join " . $value['source_table_name'] . " " . $value['_source_table_name'] . " on " . $value['_source_table_name'] . "." . $value['source_columns_name'] . "=" . $table_join_name . "." . $value['columns_name'] . $source_wheres . $_source_table_tree['join'];
 				}
 
 				//权限

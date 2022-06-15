@@ -122,7 +122,7 @@ class DictModel{
 		
 		$cols_source_list = $DataBase->selectDb("
 select dc1.data_type as source_data_type,dc2.data_type, dc2.column_name,
-	   t.id, t.isactive, t.table_name, t.columns_name, t.source_table_name, t.source_columns_name, t.source_cols_list
+	   t.id, t.isactive, t.table_name, t.columns_name, t.source_table_name, t.source_columns_name, t.source_cols_list, t.source_wheres
 	   ,sdt.title as source_table_title
 from dict_columns_source t 
 left join " . $DataBase->db_columns_table . " dc1 on upper(t.source_columns_name)=dc1.column_name and t.source_table_name=dc1.table_name

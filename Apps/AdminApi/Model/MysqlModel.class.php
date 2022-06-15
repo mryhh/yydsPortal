@@ -12,11 +12,18 @@
 namespace AdminApi\Model;
 
 class MysqlModel{
+	private $_db_name = '';
+	private $_sql = '';
+
 	public $db_columns_table = '(select * from information_schema.columns where table_schema=(select database()))';
 
 	private function ajaxReturn($arr){
 		header('Content-Type:application/json; charset=utf-8');
 		exit( json_encode($arr) );
+	}
+
+	public function select(){
+		$this->selectDb($);
 	}
 
 	//转Db数据

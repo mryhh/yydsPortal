@@ -257,16 +257,16 @@ crm.searchBoxHtml = function(searchDoom, columns, searchValue={}, doSearch=''){
 		//搜索框
 		_search += `
 			<div class="layui-form-item">
-				<label class="layui-form-label" style="width: 100px; padding: 9px;">` + val.title + `</label>
-				<div class="layui-input-inline flex-default" style="width: 150px;">` + html_input + `
+				<label class="layui-form-label">` + val.title + `</label>
+				<div class="layui-input-inline flex-default" style="width: 150px; line-height: 28px;">` + html_input + `
 				</div>
 			</div>`;
 	});
 	
 	_search += `
 			<div class="layui-form-item">
-				<label class="layui-form-label" style="width: 100px; padding: 9px;">数据量</label>
-				<div class="layui-input-inline flex-default" style="width: 150px;">
+				<label class="layui-form-label">数据量</label>
+				<div class="layui-input-inline flex-default" style="width: 150px; line-height: 28px;">
 					<select class="" data-ids="page_count">
 						<option value="100">100</option>
 						<option value="1000">1000</option>
@@ -298,7 +298,7 @@ crm.open_portal = function(source_table_name, source_columns_name, columns_name,
 		title: '查看',
 		type: 2,
 		shadeClose: false,
-		area: [($(window).width() * 0.95) + 'px', ($(window).height() - 20) + 'px'],
+		area: [($(window).width() - 20) + 'px', ($(window).height() - 20) + 'px'],
 		content: href,
 		btn: ['确定','关闭'],
 		yes: function(index){
@@ -413,7 +413,7 @@ crm.open_portal = function(source_table_name, source_columns_name, columns_name,
 			var url="404.html";
 		};
 		if (w == null || w == '') {
-			var w=($(window).width()*0.95);
+			var w=($(window).width() - 20);
 		};
 		if (h == null || h == '') {
 			var h=($(window).height() - 20);

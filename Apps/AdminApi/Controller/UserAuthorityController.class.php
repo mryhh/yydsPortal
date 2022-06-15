@@ -208,8 +208,6 @@ where o.isactive='Y' and o.id=" . $params['admin_operate_id']);
 		$this->ajaxReturn( array('code'=>'1', 'message'=>'ok', 'data'=>array('info'=>$info, 'all_tree'=>$res_tree, ), ) );
 	}
 
-	
-
 	//编辑数据权限
 	public function editDataAuthority(){
 		$params = $this->_checkParam( array('admin_user_group_id'=>'', 'admin_operate_id'=>'', 'sub_arr'=>'') );
